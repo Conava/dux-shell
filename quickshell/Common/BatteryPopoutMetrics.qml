@@ -19,6 +19,9 @@ Singleton {
     readonly property real pad: Theme.spacingL + stepS
     readonly property real gap: dense ? Theme.spacingXS : Theme.spacingS + Theme.spacingXXS + stepXS
     readonly property real sectionGap: Math.max(Theme.spacingS, Theme.spacingM + stepS)
+    readonly property real warningPaddingH: Theme.spacingL + Theme.spacingXS + stepS
+    readonly property real warningPaddingV: Theme.spacingL + stepS
+    readonly property real warningMinHeight: Theme.listItemTwoLineHeight + stepM
     readonly property real tile: Theme.spacingM + stepS
     readonly property real button: level > 0 ? Theme.minimumTouchTargetSize : dense ? Theme.buttonHeightXS : Theme.iconButtonSize
     readonly property real powerButton: Theme.buttonHeightM + stepM

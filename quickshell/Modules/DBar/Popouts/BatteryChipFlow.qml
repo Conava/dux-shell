@@ -14,6 +14,8 @@ Item {
         return total;
     }
 
+    readonly property real chipMaxWidth: width
+
     implicitHeight: flow.implicitHeight
 
     Flow {

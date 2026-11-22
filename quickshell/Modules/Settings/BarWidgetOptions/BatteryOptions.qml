@@ -27,8 +27,28 @@ Column {
     width: parent?.width ?? 0
     spacing: Theme.spacingL
 
-    Component.onCompleted: BatteryService.addRef()
-    Component.onDestruction: BatteryService.removeRef()
+    property bool temperatureHeld: false
+
+    function syncTemperatureRef() {
+        if (visible === temperatureHeld)
+            return;
+        temperatureHeld = visible;
+        if (visible)
+            BatteryService.addTemperatureRef();
+        else
+            BatteryService.removeTemperatureRef();
+    }
+
+    onVisibleChanged: syncTemperatureRef()
+    Component.onCompleted: {
+        BatteryService.addRef();
+        syncTemperatureRef();
+    }
+    Component.onDestruction: {
+        BatteryService.removeRef();
+        if (temperatureHeld)
+            BatteryService.removeTemperatureRef();
+    }
 
     readonly property var layoutLabels: [I18n.tr("Grid", "battery settings: popout section layout option"), I18n.tr("Compact", "battery settings: popout section layout option, tighter than grid"), I18n.tr("Chips", "battery popout layout: small chips with icon and value"), I18n.tr("List", "battery settings: popout section layout option")]
     readonly property var deviceLayoutLabels: layoutLabels.concat([I18n.tr("Bars", "battery popout devices layout: rows filled to the battery level")])
@@ -42,9 +62,7 @@ Column {
     readonly property var detailLabels: detailKeys.map(key => detailLabelByKey[key])
     // Line falls back to the compact look at compact densities, so it is not offered there.
     readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(BatteryPopoutMetrics.compact && key === "line"))
-    // A peripheral takes the hero spot when the battery section isn't shown, so Style and Badge outlive Show
-    readonly property bool heroPossible: BatteryService.batteryAvailable || (SettingsData.batteryPopoutDevices && BatteryService.hasPeripherals)
-    readonly property bool deviceListWaves: SettingsData.batteryPopoutDevices && (SettingsData.batteryPopoutDevicesLayout === "bars" || SettingsData.batteryPopoutDevicesLayout === "compact")
+    readonly property bool wavyApplies: (BatteryService.popoutHasHero && BatteryPopoutMetrics.style !== "card") || (SettingsData.batteryPopoutDevices && BatteryService.hasPeripherals && ["compact", "list"].indexOf(SettingsData.batteryPopoutDevicesLayout) >= 0)
     readonly property var styleLabelByKey: ({
             "compact": I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"),
             "line": I18n.tr("Line", "battery settings: popout gauge style option"),
@@ -218,7 +236,7 @@ Column {
         SettingsToggleRow {
             settingKey: "batteryPopoutWavy"
             tags: ["battery", "popout", "wavy", "wave", "charging", "animation"]
-            visible: BatteryPopoutMetrics.style !== "card" || root.deviceListWaves
+            visible: root.wavyApplies
             text: I18n.tr("Wavy when charging", "battery popout: wavy level indicator while charging")
             checked: SettingsData.batteryPopoutWavy
             onToggled: checked => SettingsData.set("batteryPopoutWavy", checked)
@@ -230,7 +248,7 @@ Column {
         title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
         settingKey: "batteryPopoutBatteryCard"
         tags: ["battery", "popout", "section", "style", "badge", "compact", "line", "ring", "card", "details", "layout", "health", "temperature", "capacity", "power"]
-        visible: root.heroPossible
+        visible: BatteryService.batteryAvailable || BatteryService.popoutHasHero
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutStyle"

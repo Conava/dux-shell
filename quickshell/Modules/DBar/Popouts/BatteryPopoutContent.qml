@@ -16,6 +16,7 @@ Item {
     property bool showEdit: true
     property string barId: ""
     property bool batteryRefHeld: false
+    property bool temperatureRefHeld: false
     property real contentPadding: BatteryPopoutMetrics.pad
     readonly property var detailKeys: Array.from(SettingsData.batteryPopoutDetails ?? [])
     readonly property bool multipleBatteries: !BatteryService.usePreferred && BatteryService.batteries.length > 1
@@ -82,7 +83,7 @@ Item {
     readonly property var deviceList: SettingsData.batteryPopoutDevices ? BatteryService.peripheralDevices : []
     readonly property var heroDevice: root.showBattery || !SettingsData.batteryPopoutDevices ? null : BatteryService.lowestPeripheral
     readonly property var listedDevices: root.heroDevice ? root.deviceList.filter(device => device.key !== root.heroDevice.key) : root.deviceList
-    readonly property bool hasHero: root.showBattery || root.heroDevice !== null
+    readonly property bool hasHero: BatteryService.popoutHasHero
     readonly property bool showPower: SettingsData.batteryPopoutPower && PowerProfileWatcher.available
     readonly property bool compactStyle: BatteryPopoutMetrics.style === "compact"
     readonly property bool heroCard: root.hasHero && !root.compactStyle
@@ -156,6 +157,20 @@ Item {
         BatteryService.removeRef();
     }
 
+    readonly property bool wantsTemperature: root.active && root.showBattery && root.detailKeys.indexOf("temperature") >= 0
+
+    function syncTemperatureRef(wanted) {
+        if (wanted === temperatureRefHeld)
+            return;
+        temperatureRefHeld = wanted;
+        if (wanted) {
+            BatteryService.addTemperatureRef();
+            return;
+        }
+        BatteryService.removeTemperatureRef();
+    }
+
+    onWantsTemperatureChanged: syncTemperatureRef(wantsTemperature)
     onListedDevicesChanged: {
         if (active && listedDevices.length > 0)
             devicesSeen = true;
@@ -169,9 +184,13 @@ Item {
     }
     Component.onCompleted: {
         syncBatteryRef(active);
+        syncTemperatureRef(wantsTemperature);
         devicesSeen = active && listedDevices.length > 0;
     }
-    Component.onDestruction: syncBatteryRef(false)
+    Component.onDestruction: {
+        syncBatteryRef(false);
+        syncTemperatureRef(false);
+    }
     Keys.onEscapePressed: event => {
         dismissRequested();
         event.accepted = true;
@@ -279,9 +298,9 @@ Item {
                 slotColor: Theme.errorContainer
 
                 SettingsRow {
-                    paddingH: Theme.spacingL + Theme.spacingXS + BatteryPopoutMetrics.stepS
-                    paddingV: Theme.spacingL + BatteryPopoutMetrics.stepS
-                    minHeight: SettingsMetrics.rowMinHeightTwoLine - Theme.densityStepM + BatteryPopoutMetrics.stepM
+                    paddingH: BatteryPopoutMetrics.warningPaddingH
+                    paddingV: BatteryPopoutMetrics.warningPaddingV
+                    minHeight: BatteryPopoutMetrics.warningMinHeight
                     iconName: "warning"
                     iconColor: Theme.onErrorContainer
                     titleColor: Theme.onErrorContainer
@@ -321,7 +340,7 @@ Item {
                 }
 
                 SectionLabel {
-                    visible: root.compactStyle && root.showGroup
+                    visible: (!root.hasHero || root.compactStyle) && root.showGroup
                     topPadding: root.hasHero ? Theme.spacingXL - Theme.groupedListGap : 0
                     bottomPadding: Theme.spacingS - Theme.groupedListGap
                     text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")

@@ -21,23 +21,18 @@ SettingsReorderList {
 
     signal entriesEdited(var entries)
 
+    function save(next) {
+        entriesEdited(next.map(row => BatteryDevices.entryForRow(row)));
+    }
+
     // Connected devices the user never touched stay out of the saved list.
-    function saveRows(next, editedId) {
-        entriesEdited(next.filter(row => row.raw || row.id === editedId).map(row => BatteryDevices.entryForRow(row)));
-    }
-
     function patchRow(index, patch) {
-        saveRows(rows.map((row, i) => i === index ? Object.assign({}, row, patch) : row), rows[index].id);
-    }
-
-    function patchPart(index, key, value) {
-        const patch = {};
-        patch[key] = value;
-        patchRow(index, patch);
+        const editedId = rows[index].id;
+        save(rows.map((row, i) => i === index ? Object.assign({}, row, patch) : row).filter(row => row.raw || row.id === editedId));
     }
 
     function removeRow(index) {
-        saveRows(rows.filter((row, i) => i !== index));
+        save(rows.filter((row, i) => i !== index && row.raw));
     }
 
     // Rows are keyed by id, so the open one follows its entry through a drag or a removal
@@ -51,7 +46,7 @@ SettingsReorderList {
     onReordered: indices => {
         const next = indices.map(i => rows[i]);
         const lastSaved = next.map(row => !!row.raw).lastIndexOf(true);
-        saveRows(next.filter((row, i) => row.raw || i < lastSaved));
+        save(next.filter((row, i) => row.raw || i < lastSaved));
     }
 
     delegate: SettingsReorderRow {
@@ -80,14 +75,6 @@ SettingsReorderList {
                 root.patchRow(index, {
                     "on": !entry.on
                 });
-        }
-
-        DActionButton {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !row.system && !row.entry.present
-            iconName: "close"
-            tooltipText: I18n.tr("Remove", "battery bar widget: forget a saved device")
-            onClicked: root.removeRow(row.index)
         }
 
         DToggle {
@@ -120,6 +107,18 @@ SettingsReorderList {
                     key: "lowOnly"
                     text: root.lowOnlyLabel
                 }
+
+                SettingsRow {
+                    visible: !row.entry.present
+                    width: parent.width
+                    paintBackground: false
+                    title: I18n.tr("Remove", "battery bar widget: forget a saved device")
+                    iconName: "delete"
+                    iconColor: Theme.error
+                    titleColor: Theme.error
+                    clickable: true
+                    onClicked: root.removeRow(row.index)
+                }
             }
         }
 
@@ -147,7 +146,9 @@ SettingsReorderList {
             width: parent.width
             paintBackground: false
             checked: row.entry[key]
-            onToggled: checked => root.patchPart(row.index, key, checked)
+            onToggled: checked => root.patchRow(row.index, ({
+                    [key]: checked
+                }))
         }
     }
 }

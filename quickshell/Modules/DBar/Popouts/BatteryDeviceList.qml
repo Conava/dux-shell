@@ -199,6 +199,7 @@ Item {
         id: chipsComp
 
         BatteryChipFlow {
+            id: chipFlow
             model: ScriptModel {
                 values: root.items
                 objectProp: "key"
@@ -206,6 +207,8 @@ Item {
 
             delegate: BatteryChip {
                 id: chip
+
+                maximumWidth: chipFlow.chipMaxWidth
 
                 required property var modelData
 

@@ -459,12 +459,10 @@ Item {
         HeroCard {
             id: compactCard
 
-            readonly property bool framed: root.style !== "compact"
-
             implicitHeight: compactColumn.implicitHeight + pad * 2
-            pad: framed ? BatteryPopoutMetrics.pad : 0
-            color: framed ? surfaceColor : "transparent"
-            border.width: framed ? Theme.layerOutlineWidth : 0
+            pad: 0
+            color: "transparent"
+            border.width: 0
 
             Column {
                 id: compactColumn
@@ -473,11 +471,11 @@ Item {
 
                 RowLayout {
                     width: parent.width
-                    spacing: compactCard.framed ? Theme.spacingM : Theme.spacingL
+                    spacing: Theme.spacingL
 
                     HeroNumber {
                         value: root.value
-                        pixelSize: compactCard.framed || BatteryPopoutMetrics.dense ? BatteryPopoutMetrics.smallNumberSize : Theme.fontSizeDisplayLarge
+                        pixelSize: BatteryPopoutMetrics.dense ? BatteryPopoutMetrics.smallNumberSize : Theme.fontSizeDisplayLarge
                         color: root.accent
                     }
 
@@ -489,13 +487,13 @@ Item {
                     }
 
                     HeroActions {
-                        Layout.alignment: compactCard.framed ? Qt.AlignVCenter : Qt.AlignTop
+                        Layout.alignment: Qt.AlignTop
                     }
                 }
 
                 HeroLine {
                     width: parent.width
-                    hatch: !compactCard.framed
+                    hatch: true
                 }
             }
         }

@@ -23,22 +23,36 @@ Singleton {
         refCount = Math.max(0, refCount - 1);
     }
 
+    property int temperatureRefCount: 0
+
+    function addTemperatureRef() {
+        temperatureRefCount++;
+    }
+
+    function removeTemperatureRef() {
+        temperatureRefCount = Math.max(0, temperatureRefCount - 1);
+    }
+
     // Degrees Celsius; 0 means the battery reports none. UPower exposes it on D-Bus only.
     property real batteryTemperature: 0
     property string _temperaturePath: ""
+    property string _temperatureSubscriptionId: ""
     property int _temperatureRequest: 0
     readonly property string _temperatureNativePath: (usePreferred ? preferredDevice : device)?.nativePath ?? ""
-    readonly property bool _temperatureWanted: refCount > 0 && DMSService.isConnected && DMSService.capabilities.includes("dbus") && _temperatureNativePath !== ""
+    readonly property bool _temperatureWanted: temperatureRefCount > 0 && DMSService.isConnected && DMSService.capabilities.includes("dbus") && _temperatureNativePath !== ""
 
     on_TemperatureWantedChanged: root._resetTemperature()
     on_TemperatureNativePathChanged: root._resetTemperature()
 
     function _resetTemperature() {
+        if (_temperatureSubscriptionId && DMSService.isConnected)
+            DMSService.dbusUnsubscribe(_temperatureSubscriptionId);
+        _temperatureSubscriptionId = "";
         _temperaturePath = "";
         _temperatureRequest++;
         batteryTemperature = 0;
         if (_temperatureWanted)
-            refreshTemperature();
+            _findTemperaturePath();
     }
 
     function _applyTemperature(request, value) {
@@ -47,35 +61,49 @@ Singleton {
         batteryTemperature = typeof value === "number" && isFinite(value) ? value : 0;
     }
 
-    function refreshTemperature() {
-        if (!_temperatureWanted)
-            return;
+    function _subscribeTemperature(request, path) {
+        DMSService.dbusSubscribe("system", "org.freedesktop.UPower", path, "org.freedesktop.DBus.Properties", "PropertiesChanged", response => {
+            const id = response.result?.subscriptionId || "";
+            if (response.error || !id)
+                return;
+            if (request !== root._temperatureRequest) {
+                DMSService.dbusUnsubscribe(id);
+                return;
+            }
+            root._temperatureSubscriptionId = id;
+        });
+    }
+
+    // Only runs while UPower has reported a native path, so the calls never start UPower.
+    function _findTemperaturePath() {
         const request = _temperatureRequest;
-        const iface = "org.freedesktop.UPower.Device";
-        if (_temperaturePath) {
-            DMSService.dbusGetProperty("system", "org.freedesktop.UPower", _temperaturePath, iface, "Temperature", reply => root._applyTemperature(request, reply.error ? 0 : reply.result?.value));
-            return;
-        }
         DMSService.dbusCall("system", "org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "EnumerateDevices", [], response => {
             const paths = response.result?.values?.[0];
             if (request !== root._temperatureRequest || response.error || !Array.isArray(paths))
                 return;
             for (const path of paths) {
-                DMSService.dbusGetAllProperties("system", "org.freedesktop.UPower", path, iface, reply => {
+                DMSService.dbusGetAllProperties("system", "org.freedesktop.UPower", path, "org.freedesktop.UPower.Device", reply => {
                     if (request !== root._temperatureRequest || root._temperaturePath || reply.error || reply.result?.NativePath !== root._temperatureNativePath)
                         return;
                     root._temperaturePath = path;
                     root._applyTemperature(request, reply.result.Temperature);
+                    root._subscribeTemperature(request, path);
                 });
             }
         });
     }
 
-    Timer {
-        interval: Timing.minute
-        repeat: true
-        running: root._temperatureWanted
-        onTriggered: root.refreshTemperature()
+    Connections {
+        target: DMSService
+        enabled: root._temperatureSubscriptionId !== ""
+
+        function onDbusSignalReceived(subscriptionId, data) {
+            if (subscriptionId !== root._temperatureSubscriptionId || data.body?.[0] !== "org.freedesktop.UPower.Device")
+                return;
+            const value = data.body?.[1]?.Temperature;
+            if (value !== undefined)
+                root._applyTemperature(root._temperatureRequest, value);
+        }
     }
 
     // FreeBSD native ACPI fallback. UPower exists in ports, but on some FreeBSD
@@ -881,6 +909,9 @@ Singleton {
             return lowest;
         return !lowest || dev.percentage < lowest.percentage ? dev : lowest;
     }, null) ?? peripheralDevices[0] ?? null
+
+    // The popout leads with the battery, or with the lowest peripheral when the battery section is off or absent.
+    readonly property bool popoutHasHero: (SettingsData.batteryPopoutBattery && batteryAvailable) || (SettingsData.batteryPopoutDevices && hasPeripherals)
 
     readonly property var bluetoothDevices: {
         if (refCount === 0)

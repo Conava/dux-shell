@@ -118,10 +118,13 @@ Item {
         id: chipsComp
 
         BatteryChipFlow {
+            id: chipFlow
             model: root.model
 
             delegate: BatteryChip {
                 id: chip
+
+                maximumWidth: chipFlow.chipMaxWidth
 
                 required property var modelData
 
