@@ -912,6 +912,8 @@ Singleton {
 
     // The popout leads with the battery, or with the lowest peripheral when the battery section is off or absent.
     readonly property bool popoutHasHero: (SettingsData.batteryPopoutBattery && batteryAvailable) || (SettingsData.batteryPopoutDevices && hasPeripherals)
+    // The lowest peripheral moves to the hero spot when the battery is not shown.
+    readonly property bool popoutListsDevices: SettingsData.batteryPopoutDevices && peripheralDevices.length > ((SettingsData.batteryPopoutBattery && batteryAvailable) || !lowestPeripheral ? 0 : 1)
 
     readonly property var bluetoothDevices: {
         if (refCount === 0)

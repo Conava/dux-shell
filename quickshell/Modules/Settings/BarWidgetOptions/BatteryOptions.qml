@@ -62,7 +62,7 @@ Column {
     readonly property var detailLabels: detailKeys.map(key => detailLabelByKey[key])
     // Line falls back to the compact look at compact densities, so it is not offered there.
     readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(BatteryPopoutMetrics.compact && key === "line"))
-    readonly property bool wavyApplies: (BatteryService.popoutHasHero && BatteryPopoutMetrics.style !== "card") || (SettingsData.batteryPopoutDevices && BatteryService.hasPeripherals && ["compact", "list"].indexOf(SettingsData.batteryPopoutDevicesLayout) >= 0)
+    readonly property bool wavyApplies: (BatteryService.popoutHasHero && BatteryPopoutMetrics.style !== "card") || (BatteryService.popoutListsDevices && ["compact", "list"].indexOf(SettingsData.batteryPopoutDevicesLayout) >= 0)
     readonly property var styleLabelByKey: ({
             "compact": I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"),
             "line": I18n.tr("Line", "battery settings: popout gauge style option"),
@@ -252,6 +252,7 @@ Column {
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutStyle"
+            enabled: BatteryService.popoutHasHero
             tags: ["battery", "popout", "style", "compact", "line", "ring", "card"]
             text: I18n.tr("Style", "battery settings: style of the battery popout gauge")
             model: root.styleKeys.map(key => root.styleLabelByKey[key])
@@ -262,6 +263,7 @@ Column {
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutBadge"
+            enabled: BatteryService.popoutHasHero
             tags: ["battery", "popout", "badge", "shape", "ring", "icon"]
             visible: !BatteryPopoutMetrics.compact && (BatteryPopoutMetrics.style === "line" || BatteryPopoutMetrics.style === "card")
             text: I18n.tr("Badge", "battery settings: shape behind the battery icon in the popout")

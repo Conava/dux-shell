@@ -340,7 +340,7 @@ Item {
                 }
 
                 SectionLabel {
-                    visible: (!root.hasHero || root.compactStyle) && root.showGroup
+                    visible: (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
                     topPadding: root.hasHero ? Theme.spacingXL - Theme.groupedListGap : 0
                     bottomPadding: Theme.spacingS - Theme.groupedListGap
                     text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
