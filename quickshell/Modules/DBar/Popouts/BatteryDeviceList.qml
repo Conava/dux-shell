@@ -63,10 +63,6 @@ Item {
         return device.name + ": " + root.percentText(device) + state;
     }
 
-    function tileColumns(count) {
-        return count <= 3 ? Math.max(1, count) : 2;
-    }
-
     Loader {
         id: body
         width: root.width
@@ -99,8 +95,6 @@ Item {
         required property color accent
         required property color cut
         property real glyphSize: Theme.iconSize
-        property real startAngle: -90
-        property real spanAngle: 360
 
         DCircularWavyProgress {
             anchors.fill: parent
@@ -110,8 +104,6 @@ Item {
             strokeWidth: BatteryPopoutMetrics.gaugeStroke
             trackStrokeWidth: BatteryPopoutMetrics.gaugeStroke
             gapSize: BatteryPopoutMetrics.ringGap
-            startAngle: ring.startAngle
-            spanAngle: ring.spanAngle
             wavy: BatteryPopoutMetrics.waveOn(root.wavy, ring.device.charging, root.level(ring.device))
             waveSpeed: 0
 
@@ -165,16 +157,10 @@ Item {
         }
     }
 
-    // Floored cells keep a spanning last tile inside the row.
     Component {
         id: tilesComp
 
         Flow {
-            id: tiles
-
-            readonly property int columns: root.tileColumns(root.count)
-            readonly property real cellWidth: Math.floor((width - spacing * (columns - 1)) / columns)
-
             spacing: Theme.groupedListGap
 
             Repeater {
@@ -183,68 +169,26 @@ Item {
                     objectProp: "key"
                 }
 
-                delegate: DCard {
+                delegate: BatteryTile {
                     id: tile
 
                     required property var modelData
-                    required property int index
-                    readonly property color accent: root.accent(tile.modelData)
-                    readonly property int span: tile.index === root.count - 1 ? tiles.columns - tile.index % tiles.columns : 1
-                    readonly property var radii: BatteryPopoutMetrics.cornerRadii(tile.index, root.count, tiles.columns, Theme.groupedListOuterRadius, Theme.groupedListOuterRadius)
+                    required index
 
-                    width: tiles.cellWidth * tile.span + tiles.spacing * (tile.span - 1)
-                    height: tileRow.implicitHeight + pad * 2
-                    pad: BatteryPopoutMetrics.tile
-                    restRadius: Theme.groupedListInnerRadius
-                    topLeftRadius: tile.radii.topLeft
-                    topRightRadius: tile.radii.topRight
-                    bottomLeftRadius: tile.radii.bottomLeft
-                    bottomRightRadius: tile.radii.bottomRight
-                    Accessible.role: Accessible.StaticText
+                    count: root.count
+                    columns: root.count <= BatteryPopoutMetrics.deviceTileColumns ? Math.max(1, root.count) : BatteryPopoutMetrics.tileColumns
+                    label: tile.modelData.name
+                    value: root.percentText(tile.modelData)
+                    valueColor: root.valueColor(tile.modelData)
                     Accessible.name: root.accessibleName(tile.modelData)
 
-                    Row {
-                        id: tileRow
-                        width: parent.width
-                        spacing: Theme.spacingM
-
-                        LevelRing {
-                            id: tileRing
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: BatteryPopoutMetrics.compactRing
-                            height: width
-                            device: tile.modelData
-                            accent: tile.accent
-                            cut: tile.color
-                            glyphSize: BatteryPopoutMetrics.compactGlyph
-                        }
-
-                        Column {
-                            width: parent.width - tileRing.width - parent.spacing
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            StyledText {
-                                width: parent.width
-                                text: root.percentText(tile.modelData)
-                                font.pixelSize: Theme.fontSizeMedium
-                                font.weight: Theme.fontWeightMedium
-                                font.features: {
-                                    "tnum": 1
-                                }
-                                color: root.valueColor(tile.modelData)
-                                wrapMode: Text.NoWrap
-                                elide: Text.ElideRight
-                            }
-
-                            StyledText {
-                                width: parent.width
-                                text: tile.modelData.name
-                                font.pixelSize: Theme.fontSizeSmall
-                                color: Theme.onSurfaceVariant
-                                wrapMode: Text.NoWrap
-                                elide: Text.ElideRight
-                            }
-                        }
+                    leading: LevelRing {
+                        width: BatteryPopoutMetrics.compactRing
+                        height: width
+                        device: tile.modelData
+                        accent: root.accent(tile.modelData)
+                        cut: tile.color
+                        glyphSize: BatteryPopoutMetrics.compactGlyph
                     }
                 }
             }

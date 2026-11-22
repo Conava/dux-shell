@@ -18,7 +18,6 @@ Item {
     property bool batteryRefHeld: false
     property real contentPadding: BatteryPopoutMetrics.pad
     readonly property var detailKeys: Array.from(SettingsData.batteryPopoutDetails ?? [])
-    readonly property var historyDevice: BatteryService.usePreferred ? BatteryService.preferredDevice : BatteryService.device
     readonly property bool multipleBatteries: !BatteryService.usePreferred && BatteryService.batteries.length > 1
     readonly property bool showBattery: SettingsData.batteryPopoutBattery && BatteryService.batteryAvailable
     readonly property var stats: {
@@ -33,11 +32,11 @@ Item {
                 ratio: health / 100,
                 bad: health < 80
             });
-        if (history.temperature !== 0)
+        if (BatteryService.batteryTemperature > 0)
             values.push({
                 key: "temperature",
                 label: I18n.tr("Temperature", "battery temperature"),
-                value: Math.round(history.temperature) + "°C",
+                value: Math.round(BatteryService.batteryTemperature) + "°C",
                 icon: "device_thermostat",
                 ratio: -1,
                 bad: false
@@ -85,12 +84,12 @@ Item {
     readonly property var listedDevices: root.heroDevice ? root.deviceList.filter(device => device.key !== root.heroDevice.key) : root.deviceList
     readonly property bool hasHero: root.showBattery || root.heroDevice !== null
     readonly property bool showPower: SettingsData.batteryPopoutPower && PowerProfileWatcher.available
-    readonly property bool compactStyle: SettingsData.batteryPopoutStyle === "compact"
+    readonly property bool compactStyle: BatteryPopoutMetrics.style === "compact"
     readonly property bool heroCard: root.hasHero && !root.compactStyle
     // Hidden until a device is listed during this open, so a laptop without peripherals gets no empty section
     property bool devicesSeen: false
     readonly property bool showDevices: root.devicesSeen && SettingsData.batteryPopoutDevices
-    readonly property bool factsBeside: SettingsData.batteryPopoutStyle === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
+    readonly property bool factsBeside: BatteryPopoutMetrics.style === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
     readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
     readonly property bool hasStats: root.statsModel.length > 0
     readonly property bool showGroup: root.showPower || root.hasStats
@@ -249,13 +248,6 @@ Item {
         onTriggered: root.forceActiveFocus()
     }
 
-    BatteryHistory {
-        id: history
-        active: root.active && root.showBattery && root.detailKeys.indexOf("temperature") >= 0
-        nativePath: root.historyDevice?.nativePath ?? ""
-        historyEnabled: false
-    }
-
     DFlickable {
         id: flickable
         anchors.fill: parent
@@ -287,6 +279,9 @@ Item {
                 slotColor: Theme.errorContainer
 
                 SettingsRow {
+                    paddingH: Theme.spacingL + Theme.spacingXS + BatteryPopoutMetrics.stepS
+                    paddingV: Theme.spacingL + BatteryPopoutMetrics.stepS
+                    minHeight: SettingsMetrics.rowMinHeightTwoLine - Theme.densityStepM + BatteryPopoutMetrics.stepM
                     iconName: "warning"
                     iconColor: Theme.onErrorContainer
                     titleColor: Theme.onErrorContainer

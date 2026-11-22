@@ -94,7 +94,6 @@ Column {
 
             readonly property var metric: root.items[index] ?? null
             readonly property string type: SysmonCatalog.typeOf(metric?.device)
-            readonly property bool expanded: root.expandedIndex === index
             readonly property string shown: (metric?.vals ?? []).map(id => SysmonService.valueLabel(type, id)).join(", ")
 
             reorderList: list
@@ -104,9 +103,8 @@ Column {
             clickable: true
             topRadius: dragging || (position === 0 && root.firstInGroup) ? Theme.groupedListOuterRadius : SettingsMetrics.groupInnerRadius
             bottomRadius: dragging ? Theme.groupedListOuterRadius : SettingsMetrics.groupInnerRadius
-            Accessible.checkable: true
-            Accessible.checked: expanded
-            Accessible.onToggleAction: root.expand(expanded ? -1 : index)
+            expandable: true
+            expanded: root.expandedIndex === index
             onClicked: root.expand(expanded ? -1 : index)
 
             leading: Item {
@@ -123,37 +121,23 @@ Column {
                 }
             }
 
-            body: Loader {
-                width: parent.width
-                // The reorder list places rows by height, so a dragged row folds its fields away until it drops
-                visible: active && !row.dragging
-                active: row.expanded
+            expandedBody: SettingsGroup {
+                slotColor: SettingsMetrics.controlColor
 
-                sourceComponent: SettingsGroup {
-                    slotColor: SettingsMetrics.controlColor
-
-                    SettingsMetricFields {
-                        metric: row.metric
-                        allowGraph: root.allowGraph
-                        onMetricEdited: metric => root.replace(row.index, metric)
-                    }
-
-                    SettingsRow {
-                        title: I18n.tr("Remove", "verb, button that removes an item from a list")
-                        iconName: "delete"
-                        iconColor: Theme.error
-                        titleColor: Theme.error
-                        clickable: true
-                        onClicked: root.remove(row.index)
-                    }
+                SettingsMetricFields {
+                    metric: row.metric
+                    allowGraph: root.allowGraph
+                    onMetricEdited: metric => root.replace(row.index, metric)
                 }
-            }
 
-            DIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                name: row.expanded ? "expand_less" : "expand_more"
-                size: Theme.iconSize
-                color: row.supportingContentColor
+                SettingsRow {
+                    title: I18n.tr("Remove", "verb, button that removes an item from a list")
+                    iconName: "delete"
+                    iconColor: Theme.error
+                    titleColor: Theme.error
+                    clickable: true
+                    onClicked: root.remove(row.index)
+                }
             }
 
             DToggle {

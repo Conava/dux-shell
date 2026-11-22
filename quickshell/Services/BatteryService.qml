@@ -23,6 +23,61 @@ Singleton {
         refCount = Math.max(0, refCount - 1);
     }
 
+    // Degrees Celsius; 0 means the battery reports none. UPower exposes it on D-Bus only.
+    property real batteryTemperature: 0
+    property string _temperaturePath: ""
+    property int _temperatureRequest: 0
+    readonly property string _temperatureNativePath: (usePreferred ? preferredDevice : device)?.nativePath ?? ""
+    readonly property bool _temperatureWanted: refCount > 0 && DMSService.isConnected && DMSService.capabilities.includes("dbus") && _temperatureNativePath !== ""
+
+    on_TemperatureWantedChanged: root._resetTemperature()
+    on_TemperatureNativePathChanged: root._resetTemperature()
+
+    function _resetTemperature() {
+        _temperaturePath = "";
+        _temperatureRequest++;
+        batteryTemperature = 0;
+        if (_temperatureWanted)
+            refreshTemperature();
+    }
+
+    function _applyTemperature(request, value) {
+        if (request !== _temperatureRequest)
+            return;
+        batteryTemperature = typeof value === "number" && isFinite(value) ? value : 0;
+    }
+
+    function refreshTemperature() {
+        if (!_temperatureWanted)
+            return;
+        const request = _temperatureRequest;
+        const iface = "org.freedesktop.UPower.Device";
+        if (_temperaturePath) {
+            DMSService.dbusGetProperty("system", "org.freedesktop.UPower", _temperaturePath, iface, "Temperature", reply => root._applyTemperature(request, reply.error ? 0 : reply.result?.value));
+            return;
+        }
+        DMSService.dbusCall("system", "org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "EnumerateDevices", [], response => {
+            const paths = response.result?.values?.[0];
+            if (request !== root._temperatureRequest || response.error || !Array.isArray(paths))
+                return;
+            for (const path of paths) {
+                DMSService.dbusGetAllProperties("system", "org.freedesktop.UPower", path, iface, reply => {
+                    if (request !== root._temperatureRequest || root._temperaturePath || reply.error || reply.result?.NativePath !== root._temperatureNativePath)
+                        return;
+                    root._temperaturePath = path;
+                    root._applyTemperature(request, reply.result.Temperature);
+                });
+            }
+        });
+    }
+
+    Timer {
+        interval: Timing.minute
+        repeat: true
+        running: root._temperatureWanted
+        onTriggered: root.refreshTemperature()
+    }
+
     // FreeBSD native ACPI fallback. UPower exists in ports, but on some FreeBSD
     // installations it exposes no usable laptop battery. Keep UPower as the
     // preferred path when it works and fall back to acpiconf(8)/sysctl(8).

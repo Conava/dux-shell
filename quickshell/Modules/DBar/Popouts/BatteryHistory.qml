@@ -10,7 +10,6 @@ Item {
     property string nativePath: ""
     property bool historyEnabled: true
     property var samples: []
-    property real temperature: 0
     property real rangeEnd: 0
     property real rangeStart: 0
     property bool loading: false
@@ -24,7 +23,6 @@ Item {
         devicePath = "";
         previousSample = null;
         samples = [];
-        temperature = 0;
         reset();
     }
     onBusAvailableChanged: {
@@ -32,7 +30,6 @@ Item {
         previousSample = null;
         if (!busAvailable) {
             samples = [];
-            temperature = 0;
         }
         reset();
     }
@@ -85,7 +82,6 @@ Item {
             if (response.error || response.result?.NativePath !== root.nativePath) {
                 root.devicePath = "";
                 root.samples = [];
-                root.temperature = 0;
                 root.loading = false;
                 return;
             }
@@ -94,7 +90,6 @@ Item {
     }
 
     function readHistory(properties, request) {
-        temperature = typeof properties.Temperature === "number" && isFinite(properties.Temperature) ? properties.Temperature : 0;
         rangeEnd = Math.floor(Date.now() / 1000);
         if (!historyEnabled || !properties.HasHistory) {
             samples = [];

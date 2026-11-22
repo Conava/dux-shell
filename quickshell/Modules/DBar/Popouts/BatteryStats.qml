@@ -102,12 +102,12 @@ Item {
                     bottomRadius: root.bottomRadius
                     label: tile.modelData.label
                     value: tile.modelData.value
-                    valueColor: tile.modelData.bad === true ? Theme.error : Theme.surfaceText
+                    valueColor: root.tone(tile.modelData.bad, Theme.surfaceText)
 
                     leading: DIcon {
                         name: tile.modelData.icon
                         size: Theme.iconSizeLarge
-                        color: tile.modelData.bad === true ? Theme.error : Theme.primary
+                        color: root.tone(tile.modelData.bad, Theme.primary)
                     }
                 }
             }
@@ -126,13 +126,13 @@ Item {
                 required property var modelData
 
                 value: chip.modelData.value
-                valueColor: chip.modelData.bad === true ? Theme.error : Theme.surfaceText
+                valueColor: root.tone(chip.modelData.bad, Theme.surfaceText)
                 Accessible.name: chip.modelData.label + ": " + chip.modelData.value
 
                 leading: DIcon {
                     name: chip.modelData.icon
                     size: BatteryPopoutMetrics.compactGlyph
-                    color: chip.modelData.bad === true ? Theme.error : Theme.primary
+                    color: root.tone(chip.modelData.bad, Theme.primary)
                 }
             }
         }
@@ -164,6 +164,10 @@ Item {
         }
     }
 
+    function tone(bad, normal) {
+        return bad === true ? Theme.error : normal;
+    }
+
     component StatGlyph: DRingGauge {
         id: glyph
         property string iconName: ""
@@ -175,14 +179,14 @@ Item {
         value: ratio
         strokeWidth: Theme.outlineWidthFocused
         trackGap: Theme.spacingXXS
-        ringColor: bad ? Theme.error : Theme.primary
+        ringColor: root.tone(bad, Theme.primary)
         animated: root.active
 
         DIcon {
             anchors.centerIn: parent
             name: glyph.iconName
             size: glyph.ratio >= 0 ? Theme.iconSizeSmall : Theme.iconSize
-            color: glyph.bad ? Theme.error : Theme.primary
+            color: root.tone(glyph.bad, Theme.primary)
         }
     }
 
@@ -237,7 +241,7 @@ Item {
                     font.features: {
                         "tnum": 1
                     }
-                    color: entry.bad ? Theme.error : Theme.onSurface
+                    color: root.tone(entry.bad, Theme.onSurface)
                     wrapMode: Text.NoWrap
                     elide: Text.ElideRight
                 }
@@ -296,7 +300,7 @@ Item {
                 font.features: {
                     "tnum": 1
                 }
-                color: row.bad ? Theme.error : Theme.onSurface
+                color: root.tone(row.bad, Theme.onSurface)
                 wrapMode: Text.NoWrap
             }
         }

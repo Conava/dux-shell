@@ -23,7 +23,6 @@ DCard {
             [PowerProfile.Balanced]: "cookie9",
             [PowerProfile.Performance]: "burst"
         })
-    readonly property var thumbShapes: ["puffy", "cookie9", "burst", "cookie4"]
     // Off until the first layout has settled, so nothing slides in when the popout opens
     property bool settled: false
     readonly property bool animate: active && settled && !Theme.reduceMotion
@@ -306,7 +305,8 @@ DCard {
                 const previous = settledIndex;
                 settledIndex = current;
                 if (previous >= 0 && root.animate) {
-                    thumb.fromShape = thumb.shapeAt(previous);
+                    if (!thumbMorph.running || thumb.morph >= 0.5)
+                        thumb.fromShape = thumb.shapeAt(previous);
                     thumb.morph = 0;
                     thumbMorph.restart();
                     thumbPop.restart();
@@ -389,7 +389,7 @@ DCard {
                 property real morph: 1
 
                 function shapeAt(index) {
-                    return root.profileShapes[root.profiles[index]] ?? "cookie4";
+                    return root.profileShapes[root.profiles[index]] ?? Object.values(root.profileShapes)[0];
                 }
 
                 visible: slider.current >= 0
@@ -421,7 +421,7 @@ DCard {
 
                 DMorphShape {
                     anchors.fill: parent
-                    shapes: root.thumbShapes
+                    shapes: Object.values(root.profileShapes)
                     from: thumb.fromShape
                     to: thumb.toShape
                     progress: thumb.morph

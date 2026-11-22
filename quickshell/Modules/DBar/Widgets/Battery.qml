@@ -36,8 +36,9 @@ BasePill {
     readonly property var renderEntries: entries.filter(item => item.kind === "system" || item.entry.icon || item.entry.percent)
     readonly property bool shouldHide: renderEntries.length === 0
     readonly property bool percentInMeter: batteryStyle === "solid" && batteryDirection === "horizontal" && !isVerticalOrientation
-    // A solid meter whose long side runs across the bar is shrunk to fit the same room as the circle.
+    // A solid meter running across the bar shrinks to fit; upright in a horizontal bar it matches the icon height.
     readonly property bool meterAcross: batteryStyle === "solid" && (batteryDirection === "vertical") !== isVerticalOrientation
+    readonly property bool meterUpright: meterAcross && !isVerticalOrientation
     readonly property bool percentVisible: showPercent && BatteryService.hasBatteryReading
     readonly property bool showPowerCharging: SettingsData.widgetOption("battery", widgetData, "showBatteryPowerCharging")
     readonly property bool showPowerDischarging: SettingsData.widgetOption("battery", widgetData, "showBatteryPowerDischarging")
@@ -289,7 +290,7 @@ BasePill {
                                     neutralColor: Theme.widgetIconColor
                                     colorOverride: battery.critical ? battery.criticalForeground : "transparent"
                                     maxDiameter: battery.widgetThickness - Theme.spacingXS
-                                    maxLength: battery.meterAcross ? Math.min(battery.iconSize, battery.widgetThickness - Theme.spacingXS) : 0
+                                    maxLength: battery.meterAcross ? (battery.meterUpright ? Math.min(battery.iconSize, battery.widgetThickness - Theme.spacingXS) : battery.widgetThickness - Theme.spacingXS) : 0
                                     thickness: battery.iconSize
                                     fontSize: battery.textSize
                                 }

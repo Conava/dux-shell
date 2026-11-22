@@ -12621,7 +12621,7 @@
     "optionFile": "IslandOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:14",
+    "section": "barWidgetOption:BatteryOptions.qml:15",
     "label": "Overview",
     "tabIndex": 22,
     "keywords": [],
@@ -12757,7 +12757,7 @@
     "optionFile": "AppsDockOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:15",
+    "section": "barWidgetOption:BatteryOptions.qml:18",
     "label": "Show",
     "tabIndex": 22,
     "keywords": [],
@@ -13141,7 +13141,7 @@
     "optionFile": "IslandOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:18",
+    "section": "barWidgetOption:BatteryOptions.qml:14",
     "label": "Wavy when charging",
     "tabIndex": 22,
     "keywords": [],

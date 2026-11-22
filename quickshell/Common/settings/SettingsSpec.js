@@ -2,6 +2,7 @@
 .import "../../DCommon/Common/settings/SharedSettingsSpec.js" as Shared
 .import "../../DCommon/Common/settings/SpecUtil.js" as Util
 .import "DockConfig.js" as DockConfig
+.import "DensityPresets.js" as DensityPresets
 
 function lockWidgetDefaults() {
     return Shared.lockWidgetDefaults();
@@ -45,7 +46,7 @@ var BATTERY_BAR_COLORS = ["theme", "lowcharging", "level"];
 var BATTERY_POPOUT_COLORS = ["primary"].concat(BATTERY_BAR_COLORS);
 var BATTERY_POPOUT_STYLES = ["compact", "line", "ring", "card"];
 var BATTERY_POPOUT_BADGES = ["shape", "ring"];
-var BATTERY_POPOUT_DENSITIES = ["shell", "spacious", "comfortable", "compact", "dense"];
+var BATTERY_POPOUT_DENSITIES = ["shell"].concat(DensityPresets.LEVELS);
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
 
 var LOCAL_SPEC = {

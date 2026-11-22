@@ -2,7 +2,6 @@ import QtQuick
 import qs.Common
 import qs.Services
 import qs.Modules.Settings.Widgets
-import qs.Modules.DBar.Popouts
 import "../../../Common/settings/SettingsSpec.js" as Spec
 
 Column {
@@ -39,20 +38,28 @@ Column {
             "capacity": I18n.tr("Capacity", "battery energy capacity stat label"),
             "power": I18n.tr("Power", "battery stat label, charge or discharge rate in watts", true)
         })
-    // Same reading the popout uses to decide whether it can show a temperature tile.
-    readonly property bool hasTemperature: temperatureReader.temperature !== 0
-    readonly property var detailKeys: Spec.BATTERY_POPOUT_DETAILS.filter(key => key !== "temperature" || hasTemperature)
+    readonly property var detailKeys: Spec.BATTERY_POPOUT_DETAILS.filter(key => key !== "temperature" || BatteryService.batteryTemperature > 0)
     readonly property var detailLabels: detailKeys.map(key => detailLabelByKey[key])
-    readonly property bool compactPopout: BatteryPopoutMetrics.compact
     // Line falls back to the compact look at compact densities, so it is not offered there.
-    readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(compactPopout && key === "line"))
-    readonly property string effectiveStyle: compactPopout && SettingsData.batteryPopoutStyle === "line" ? "compact" : SettingsData.batteryPopoutStyle
+    readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(BatteryPopoutMetrics.compact && key === "line"))
+    // A peripheral takes the hero spot when the battery section isn't shown, so Style and Badge outlive Show
+    readonly property bool heroPossible: BatteryService.batteryAvailable || (SettingsData.batteryPopoutDevices && BatteryService.hasPeripherals)
+    readonly property bool deviceListWaves: SettingsData.batteryPopoutDevices && (SettingsData.batteryPopoutDevicesLayout === "bars" || SettingsData.batteryPopoutDevicesLayout === "compact")
     readonly property var styleLabelByKey: ({
             "compact": I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"),
             "line": I18n.tr("Line", "battery settings: popout gauge style option"),
             "ring": I18n.tr("Ring", "noun, battery widget ring gauge style option"),
             "card": I18n.tr("Card", "battery settings: popout gauge style option, filled card")
         })
+
+    component BarToggle: SettingsToggleRow {
+        required property string key
+
+        width: parent.width
+        paintBackground: false
+        checked: root.page.value(key)
+        onToggled: checked => root.page.set(key, checked)
+    }
 
     function shownDetailLabels() {
         const shown = SettingsData.batteryPopoutDetails;
@@ -63,15 +70,6 @@ Column {
     function setDetail(index, selected) {
         const shown = SettingsData.batteryPopoutDetails;
         SettingsData.set("batteryPopoutDetails", Spec.BATTERY_POPOUT_DETAILS.filter(key => key === detailKeys[index] ? selected : shown.indexOf(key) >= 0));
-    }
-
-    BatteryHistory {
-        id: temperatureReader
-
-        visible: false
-        active: root.visible && BatteryService.batteryAvailable
-        nativePath: (BatteryService.usePreferred ? BatteryService.preferredDevice : BatteryService.device)?.nativePath ?? ""
-        historyEnabled: false
     }
 
     SettingsCard {
@@ -128,54 +126,36 @@ Column {
                     width: parent.width
                     spacing: Theme.spacingXS
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryPercent"
                         text: I18n.tr("Show percentage")
-                        checked: root.page.value("showBatteryPercent")
-                        onToggled: checked => root.page.set("showBatteryPercent", checked)
                     }
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryPercentOnlyOnBattery"
                         enabled: root.page.value("showBatteryPercent")
                         text: I18n.tr("Only on battery")
-                        checked: root.page.value("showBatteryPercentOnlyOnBattery")
-                        onToggled: checked => root.page.set("showBatteryPercentOnlyOnBattery", checked)
                     }
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryTime"
                         text: I18n.tr("Show remaining time")
-                        checked: root.page.value("showBatteryTime")
-                        onToggled: checked => root.page.set("showBatteryTime", checked)
                     }
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryTimeOnlyOnBattery"
                         enabled: root.page.value("showBatteryTime")
                         text: I18n.tr("Only on battery")
-                        checked: root.page.value("showBatteryTimeOnlyOnBattery")
-                        onToggled: checked => root.page.set("showBatteryTimeOnlyOnBattery", checked)
                     }
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryPowerCharging"
                         text: I18n.tr("Show charge rate", "Battery bar widget setting: show how many watts are going into the battery while charging")
-                        checked: root.page.value("showBatteryPowerCharging")
-                        onToggled: checked => root.page.set("showBatteryPowerCharging", checked)
                     }
 
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
+                    BarToggle {
+                        key: "showBatteryPowerDischarging"
                         text: I18n.tr("Show discharge rate", "Battery bar widget setting: show how many watts the system is drawing from the battery")
-                        checked: root.page.value("showBatteryPowerDischarging")
-                        onToggled: checked => root.page.set("showBatteryPowerDischarging", checked)
                     }
 
                     SettingsButtonGroupRow {
@@ -212,7 +192,7 @@ Column {
         iconName: "web_asset"
         title: I18n.tr("Popout", "battery settings: card title for the battery popout appearance")
         settingKey: "batteryPopout"
-        tags: ["battery", "popout", "appearance", "color", "density", "spacious", "comfortable", "compact", "dense"]
+        tags: ["battery", "popout", "appearance", "color", "density", "spacious", "comfortable", "compact", "dense", "wavy", "wave"]
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutColor"
@@ -228,11 +208,20 @@ Column {
             settingKey: "batteryPopoutDensity"
             tags: ["battery", "popout", "density", "spacious", "comfortable", "compact", "dense", "spacing", "size"]
             text: I18n.tr("Interface density", "interface density setting label")
-            model: [I18n.tr("Default", "battery popout density option that follows the shell's interface density"), I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Comfortable", "interface density option with the default spacing"), I18n.tr("Compact", "interface density option fitting the most items on screen"), I18n.tr("Dense", "interface density option denser than compact for small text and tight rows")]
+            model: [I18n.tr("Inherit", "inherit from global setting"), I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Comfortable", "interface density option with the default spacing"), I18n.tr("Compact", "interface density option fitting the most items on screen"), I18n.tr("Dense", "interface density option denser than compact for small text and tight rows")]
             values: Spec.BATTERY_POPOUT_DENSITIES
             value: SettingsData.batteryPopoutDensity
             fallbackValue: "shell"
             onValueSelected: value => SettingsData.set("batteryPopoutDensity", value)
+        }
+
+        SettingsToggleRow {
+            settingKey: "batteryPopoutWavy"
+            tags: ["battery", "popout", "wavy", "wave", "charging", "animation"]
+            visible: BatteryPopoutMetrics.style !== "card" || root.deviceListWaves
+            text: I18n.tr("Wavy when charging", "battery popout: wavy level indicator while charging")
+            checked: SettingsData.batteryPopoutWavy
+            onToggled: checked => SettingsData.set("batteryPopoutWavy", checked)
         }
     }
 
@@ -240,33 +229,23 @@ Column {
         iconName: "battery_full"
         title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
         settingKey: "batteryPopoutBatteryCard"
-        tags: ["battery", "popout", "section", "style", "badge", "wavy", "wave", "compact", "line", "ring", "card", "details", "layout", "health", "temperature", "capacity", "power"]
-        visible: BatteryService.batteryAvailable
-
-        SettingsToggleRow {
-            settingKey: "batteryPopoutBattery"
-            tags: ["battery", "popout", "section", "show", "hide"]
-            text: I18n.tr("Show", "battery settings: show this popout section")
-            checked: SettingsData.batteryPopoutBattery
-            onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
-        }
+        tags: ["battery", "popout", "section", "style", "badge", "compact", "line", "ring", "card", "details", "layout", "health", "temperature", "capacity", "power"]
+        visible: root.heroPossible
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutStyle"
             tags: ["battery", "popout", "style", "compact", "line", "ring", "card"]
-            enabled: SettingsData.batteryPopoutBattery
             text: I18n.tr("Style", "battery settings: style of the battery popout gauge")
             model: root.styleKeys.map(key => root.styleLabelByKey[key])
             values: root.styleKeys
-            value: root.effectiveStyle
+            value: BatteryPopoutMetrics.style
             onValueSelected: value => SettingsData.set("batteryPopoutStyle", value)
         }
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutBadge"
             tags: ["battery", "popout", "badge", "shape", "ring", "icon"]
-            visible: !root.compactPopout && (root.effectiveStyle === "line" || root.effectiveStyle === "card")
-            enabled: SettingsData.batteryPopoutBattery
+            visible: !BatteryPopoutMetrics.compact && (BatteryPopoutMetrics.style === "line" || BatteryPopoutMetrics.style === "card")
             text: I18n.tr("Badge", "battery settings: shape behind the battery icon in the popout")
             model: [I18n.tr("Shape", "battery settings: popout badge option, filled shape"), I18n.tr("Ring", "noun, battery widget ring gauge style option")]
             values: Spec.BATTERY_POPOUT_BADGES
@@ -275,18 +254,18 @@ Column {
         }
 
         SettingsToggleRow {
-            settingKey: "batteryPopoutWavy"
-            tags: ["battery", "popout", "wavy", "wave", "charging", "animation"]
-            visible: root.effectiveStyle !== "card"
-            enabled: SettingsData.batteryPopoutBattery
-            text: I18n.tr("Wavy when charging", "battery popout: wavy level indicator while charging")
-            checked: SettingsData.batteryPopoutWavy
-            onToggled: checked => SettingsData.set("batteryPopoutWavy", checked)
+            settingKey: "batteryPopoutBattery"
+            tags: ["battery", "popout", "section", "show", "hide"]
+            text: I18n.tr("Show", "battery settings: show this popout section")
+            visible: BatteryService.batteryAvailable
+            checked: SettingsData.batteryPopoutBattery
+            onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
         }
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutDetailsLayout"
             tags: ["battery", "popout", "details", "layout", "grid", "compact", "chips", "list"]
+            visible: BatteryService.batteryAvailable
             enabled: SettingsData.batteryPopoutBattery
             text: I18n.tr("Layout", "battery settings: layout of this popout section")
             model: root.layoutLabels
@@ -300,6 +279,7 @@ Column {
             settingKey: "batteryPopoutDetails"
             tags: ["battery", "popout", "details", "health", "temperature", "capacity", "power"]
             text: I18n.tr("Details", "battery settings: which detail tiles the popout shows")
+            visible: BatteryService.batteryAvailable
             enabled: SettingsData.batteryPopoutBattery
             selectionMode: "multi"
             model: root.detailLabels

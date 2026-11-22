@@ -14,9 +14,9 @@ DCard {
     property real bottomRadius: Theme.groupedListOuterRadius
     property alias leading: leadingBox.data
 
-    readonly property int columns: Math.max(1, Math.min(count, 2))
+    property int columns: Math.max(1, Math.min(count, BatteryPopoutMetrics.tileColumns))
     readonly property int span: index === count - 1 ? columns - index % columns : 1
-    readonly property real cellWidth: Math.floor((parent.width - Theme.groupedListGap * (columns - 1)) / columns)
+    readonly property real cellWidth: Math.floor(((parent?.width ?? 0) - Theme.groupedListGap * (columns - 1)) / columns)
     readonly property var radii: BatteryPopoutMetrics.cornerRadii(index, count, columns, topRadius, bottomRadius)
 
     width: cellWidth * span + Theme.groupedListGap * (span - 1)

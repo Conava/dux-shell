@@ -11,7 +11,7 @@ SettingsReorderList {
 
     property var saved: null
     property var devices: []
-    // Rows shown under the system battery while it is on, supplied by the host so they stay in its search index
+    // Supplied by the host so these rows stay in its search index
     property Component systemDetails: null
 
     readonly property var rows: BatteryDevices.editorRows(saved, devices)
@@ -28,6 +28,12 @@ SettingsReorderList {
 
     function patchRow(index, patch) {
         saveRows(rows.map((row, i) => i === index ? Object.assign({}, row, patch) : row), rows[index].id);
+    }
+
+    function patchPart(index, key, value) {
+        const patch = {};
+        patch[key] = value;
+        patchRow(index, patch);
     }
 
     function removeRow(index) {
@@ -53,8 +59,7 @@ SettingsReorderList {
 
         readonly property var entry: root.rows[index] ?? root.emptyRow
         readonly property bool system: entry.kind === "system"
-        readonly property bool detailed: system ? BatteryService.batteryAvailable : true
-        readonly property bool expanded: detailed && root.expandedId === entry.id
+        readonly property bool detailed: !system || BatteryService.batteryAvailable
 
         reorderList: root
         clickable: true
@@ -63,9 +68,9 @@ SettingsReorderList {
         iconName: system ? (BatteryService.batteryAvailable ? BatteryService.getBatteryIcon() : "power") : (entry.iconName || "devices_other")
         iconColor: entry.present ? Theme.primary : Theme.onSurfaceVariant
         titleColor: entry.present ? contentColor : supportingContentColor
-        Accessible.checkable: detailed
-        Accessible.checked: expanded
-        Accessible.onToggleAction: row.activate()
+        expandable: detailed
+        expanded: detailed && entry.id !== "" && root.expandedId === entry.id
+        expandedBody: system ? systemBody : deviceBody
         onClicked: row.activate()
 
         function activate() {
@@ -85,14 +90,6 @@ SettingsReorderList {
             onClicked: root.removeRow(row.index)
         }
 
-        DIcon {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: row.detailed
-            name: row.expanded ? "expand_less" : "expand_more"
-            size: Theme.iconSize
-            color: row.supportingContentColor
-        }
-
         DToggle {
             anchors.verticalCenter: parent.verticalCenter
             hideText: true
@@ -103,73 +100,54 @@ SettingsReorderList {
                 })
         }
 
-        body: Loader {
+        Component {
+            id: deviceBody
+
+            Column {
+                spacing: Theme.spacingXS
+
+                PartToggle {
+                    key: "icon"
+                    text: I18n.tr("Show icon", "battery bar widget: show the device glyph")
+                }
+
+                PartToggle {
+                    key: "percent"
+                    text: I18n.tr("Show percentage", "battery bar widget: show the charge number")
+                }
+
+                PartToggle {
+                    key: "lowOnly"
+                    text: root.lowOnlyLabel
+                }
+            }
+        }
+
+        Component {
+            id: systemBody
+
+            Column {
+                spacing: Theme.spacingXS
+
+                PartToggle {
+                    key: "lowOnly"
+                    text: root.lowOnlyLabel
+                }
+
+                Loader {
+                    width: parent.width
+                    sourceComponent: root.systemDetails
+                }
+            }
+        }
+
+        component PartToggle: SettingsToggleRow {
+            required property string key
+
             width: parent.width
-            // The reorder list places rows by height, so a dragged row folds its options away until it drops
-            visible: active && !row.dragging
-            active: row.expanded
-            sourceComponent: row.system ? systemBody : deviceBody
-
-            Component {
-                id: deviceBody
-
-                Column {
-                    spacing: Theme.spacingXS
-
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
-                        text: I18n.tr("Show icon", "battery bar widget: show the device glyph")
-                        checked: row.entry.icon
-                        onToggled: checked => root.patchRow(row.index, {
-                                "icon": checked
-                            })
-                    }
-
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
-                        text: I18n.tr("Show percentage", "battery bar widget: show the charge number")
-                        checked: row.entry.percent
-                        onToggled: checked => root.patchRow(row.index, {
-                                "percent": checked
-                            })
-                    }
-
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
-                        text: root.lowOnlyLabel
-                        checked: row.entry.lowOnly
-                        onToggled: checked => root.patchRow(row.index, {
-                                "lowOnly": checked
-                            })
-                    }
-                }
-            }
-
-            Component {
-                id: systemBody
-
-                Column {
-                    spacing: Theme.spacingXS
-
-                    SettingsToggleRow {
-                        width: parent.width
-                        paintBackground: false
-                        text: root.lowOnlyLabel
-                        checked: row.entry.lowOnly
-                        onToggled: checked => root.patchRow(row.index, {
-                                "lowOnly": checked
-                            })
-                    }
-
-                    Loader {
-                        width: parent.width
-                        sourceComponent: root.systemDetails
-                    }
-                }
-            }
+            paintBackground: false
+            checked: row.entry[key]
+            onToggled: checked => root.patchPart(row.index, key, checked)
         }
     }
 }

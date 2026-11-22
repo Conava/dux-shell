@@ -4,21 +4,10 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    // The popout follows the shell density unless the battery setting overrides it.
-    readonly property int level: {
-        switch (SettingsData.batteryPopoutDensity) {
-        case "spacious":
-            return 1;
-        case "comfortable":
-            return 0;
-        case "compact":
-            return -1;
-        case "dense":
-            return -2;
-        default:
-            return Theme.densityLevel;
-        }
-    }
+    readonly property int level: SettingsData.batteryPopoutDensity === "shell" ? Theme.densityLevel : Theme.densityLevelFor(SettingsData.batteryPopoutDensity)
+    readonly property string style: SettingsData.batteryPopoutStyle === "line" && level < 0 ? "compact" : SettingsData.batteryPopoutStyle
+    readonly property int tileColumns: 2
+    readonly property int deviceTileColumns: 3
     readonly property real stepXS: level * Theme.spacingXXS
     readonly property real stepS: level * Theme.spacingXS
     readonly property real stepM: level * Theme.spacingS

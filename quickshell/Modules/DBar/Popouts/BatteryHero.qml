@@ -25,7 +25,7 @@ Item {
     signal settingsRequested
     signal editRequested
 
-    readonly property string style: SettingsData.batteryPopoutStyle
+    readonly property string style: BatteryPopoutMetrics.style
     readonly property bool wavy: SettingsData.batteryPopoutWavy
     readonly property bool compact: BatteryPopoutMetrics.compact
     readonly property bool unknown: root.source.unknown ?? false
@@ -375,7 +375,7 @@ Item {
             case "card":
                 return cardLayout;
             default:
-                return root.compact ? lineCompact : lineFull;
+                return lineFull;
             }
         }
     }

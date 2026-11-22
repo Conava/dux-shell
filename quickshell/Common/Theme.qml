@@ -1184,8 +1184,8 @@ Singleton {
         return Shape.buttonRadius(width, height, sizeHeight, pressed, round, shapeScale, fixedRadius, shapeMorph, pillControls);
     }
 
-    readonly property int densityLevel: {
-        switch (typeof SettingsData !== "undefined" ? SettingsData.density : "") {
+    function densityLevelFor(name) {
+        switch (name) {
         case "spacious":
             return 1;
         case "compact":
@@ -1196,6 +1196,7 @@ Singleton {
             return 0;
         }
     }
+    readonly property int densityLevel: densityLevelFor(typeof SettingsData !== "undefined" ? SettingsData.density : "")
     // Added by surface metrics and text fields; other shared tokens stay fixed so bar, dock and lock never move.
     readonly property real densityStepS: densityLevel * spacingXS
     readonly property real densityStepM: densityLevel * spacingS

@@ -9,6 +9,10 @@ SettingsRow {
     required property int index
     property bool reorderEnabled: true
     property string textIcon: ""
+    // Opt-in fold: the host owns `expanded` and toggles it from onClicked
+    property bool expandable: false
+    property bool expanded: false
+    property Component expandedBody: null
     readonly property bool dragging: reorderList.draggingIndex === index
     readonly property int position: reorderList.order.indexOf(index)
 
@@ -17,6 +21,8 @@ SettingsRow {
     topRadius: dragging || (position === 0 && reorderList.firstInGroup) ? Theme.groupedListOuterRadius : SettingsMetrics.groupInnerRadius
     bottomRadius: dragging || (position === reorderList.count - 1 && reorderList.lastInGroup) ? Theme.groupedListOuterRadius : SettingsMetrics.groupInnerRadius
     z: dragging ? 100 : 0
+    Accessible.expandable: expandable
+    Accessible.expanded: expandable && expanded
 
     function focusHandle(reason) {
         handle.forceActiveFocus(reason);
@@ -35,6 +41,22 @@ SettingsRow {
             event.accepted = true;
             return;
         }
+    }
+
+    // The reorder list places rows by height, so a dragged row folds its body away until it drops
+    body: Loader {
+        width: parent.width
+        visible: active && !root.dragging
+        active: root.expandable && root.expanded
+        sourceComponent: root.expandedBody
+    }
+
+    DIcon {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.expandable
+        name: root.expanded ? "expand_less" : "expand_more"
+        size: Theme.iconSize
+        color: root.supportingContentColor
     }
 
     leading: [

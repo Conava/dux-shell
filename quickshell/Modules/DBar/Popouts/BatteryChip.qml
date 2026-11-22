@@ -3,6 +3,6 @@ import qs.DCommon.Widgets
 
 DDetailChip {
     implicitHeight: BatteryPopoutMetrics.chip
-    radius: height / 2
-    maximumWidth: parent?.width ?? -1
+    radius: Theme.fullRadius(width, height)
+    maximumWidth: parent?.parent?.width ?? -1
 }
