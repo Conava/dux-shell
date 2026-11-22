@@ -728,7 +728,7 @@ Item {
         if (!root.frameOwnsConnectedChrome || root.joinsBar)
             return 0;
         const ft = SettingsData.frameThickness;
-        const fr = SettingsData.frameRounding;
+        const fr = Theme.frameRadius;
         const ccr = Theme.connectedCornerRadius;
         return Math.max(ft * 4, ft + ccr * 2, fr);
     }
@@ -1346,6 +1346,7 @@ Item {
             dismissEnabled: root.hoverDismissEnabled
             dismissSuspended: root.hoverDismissSuspended || root.dragPassthrough
             surfaceVisible: root.shouldBeVisible
+            hoverSafeContains: root.popoutHandle.hoverSafeContains
             onDismissRequested: root.closeFromHoverDismiss()
         }
 

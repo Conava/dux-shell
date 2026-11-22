@@ -391,6 +391,8 @@ DPopout {
                 editMode: root.editMode
                 optionsShown: mainContainer.optionsShown
                 menuOpen: mainContainer.actionsMenuOpen
+                panelResizing: mainContainer.panelResizing
+                canUndo: (pageActions.item as DashPageActions)?.canUndo ?? false
                 tabItem: pages.currentItem
                 contentScope: pages.currentHost
                 contentTarget: pages.focusTarget
@@ -403,6 +405,8 @@ DPopout {
                         mainContainer.focusInitial();
                 }
                 onEditModeRequested: on => root.editMode = on
+                onDiscardRequested: (pageActions.item as DashPageActions)?.discard()
+                onUndoRequested: (pageActions.item as DashPageActions)?.undo()
                 onLeaveRequested: mainContainer.focusInitial()
                 onOptionsDismissRequested: tabOptions.item?.dismiss()
                 onCloseRequested: {
@@ -552,6 +556,7 @@ DPopout {
                         readonly property var currentItem: root.activeTabId !== "" ? currentHost?.item ?? null : null
                         readonly property Item focusTarget: root.activeTabId === "" ? emptyContent.item?.focusTarget ?? null : currentHost?.focusTarget ?? null
                         readonly property bool currentSettled: !!currentHost && (!!currentHost.item || currentHost.failed)
+                        readonly property bool currentBuilt: !!currentHost && (currentHost.built || currentHost.failed)
                         readonly property real currentHostImplicitHeight: currentHost?.implicitHeight ?? 0
                         readonly property real targetHeight: root.activeTabId === "" ? emptyContent.implicitHeight : currentSettled && currentHost.isCurrent ? DashMetrics.panelHeightFor(root.activeTabId, currentHostImplicitHeight) : -1
                         readonly property real bodyHeight: root.activeTabId === "" ? emptyContent.implicitHeight : Math.max(settledHeight, currentHostImplicitHeight)
@@ -627,6 +632,7 @@ DPopout {
                                 keyForwardTarget: mainContainer
                                 contentViewport: pages
                                 isCurrent: root.activeTabId === modelData
+                                holdExit: root.activeTabId !== "" && !pages.currentBuilt
 
                                 onIsCurrentChanged: {
                                     if (isCurrent) {

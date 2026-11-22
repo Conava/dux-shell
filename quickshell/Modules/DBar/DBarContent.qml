@@ -417,6 +417,14 @@ Item {
         hoverController.updateBarHovered(hovered);
     }
 
+    function pointerMovedToIsland() {
+        hoverController.pointerMovedToIsland();
+    }
+
+    function pointInActiveHoverSafeZone(gx, gy) {
+        return hoverController.pointInActiveHoverSafeZone(gx, gy);
+    }
+
     function invalidateHoverCandidateCache() {
         hoverController.invalidateCandidateCache();
     }

@@ -113,6 +113,14 @@ Item {
         scrollArea.processWheel(wheel);
     }
 
+    function pointerMovedToIsland() {
+        topBarContent.pointerMovedToIsland();
+    }
+
+    function pointInActiveHoverSafeZone(gx, gy) {
+        return topBarContent.pointInActiveHoverSafeZone(gx, gy);
+    }
+
     property var controlCenterButtonRef: null
     property var clockButtonRef: null
     property var systemUpdateButtonRef: null
