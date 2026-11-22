@@ -829,6 +829,7 @@ Singleton {
     property string batteryPopoutBadge: Spec.SPEC.batteryPopoutBadge.def
     property bool batteryPopoutWavy: Spec.SPEC.batteryPopoutWavy.def
     property bool batteryPopoutBattery: Spec.SPEC.batteryPopoutBattery.def
+    property bool batteryPopoutStats: Spec.SPEC.batteryPopoutStats.def
     property string batteryPopoutDetailsLayout: Spec.SPEC.batteryPopoutDetailsLayout.def
     property var batteryPopoutDetails: Spec.SPEC.batteryPopoutDetails.def
     property bool batteryPopoutPower: Spec.SPEC.batteryPopoutPower.def

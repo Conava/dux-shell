@@ -21,9 +21,9 @@ BatteryCard {
     readonly property int currentIndex: profiles.indexOf(PowerProfileWatcher.currentProfile)
     readonly property int focusIndex: Math.max(0, Math.min(currentIndex, profiles.length - 1))
     readonly property var profileShapes: ({
-            [PowerProfile.PowerSaver]: "puffy",
+            [PowerProfile.PowerSaver]: "cookie4",
             [PowerProfile.Balanced]: "cookie9",
-            [PowerProfile.Performance]: "burst"
+            [PowerProfile.Performance]: "sunny"
         })
     // Off until the first layout has settled, so nothing slides in when the popout opens
     property bool settled: false

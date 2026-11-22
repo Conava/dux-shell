@@ -210,7 +210,7 @@ var DEFAULTS = {
         trayIconSpacing: 0
     },
     battery: {
-        batteryDirection: "vertical",
+        batteryDirection: "horizontal",
         batterySeparator: "gap",
         batteryDevices: [{ id: "system", on: true }],
         showBatteryPercent: true,
@@ -219,7 +219,7 @@ var DEFAULTS = {
         showBatteryTimeOnlyOnBattery: false,
         showBatteryPowerCharging: false,
         showBatteryPowerDischarging: false,
-        batteryStyle: "icon"
+        batteryStyle: "solid"
     },
     controlCenterButton: {
         showNetworkIcon: true,

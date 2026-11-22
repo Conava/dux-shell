@@ -1281,11 +1281,11 @@ var LOCAL_SPEC = {
         def: 20
     },
     batteryPopoutColor: {
-        def: "primary",
+        def: "lowcharging",
         coerce: oneOf(BATTERY_POPOUT_COLORS)
     },
     batteryPopoutStyle: {
-        def: "compact",
+        def: "ring",
         coerce: oneOf(BATTERY_POPOUT_STYLES)
     },
     batteryPopoutDensity: {
@@ -1293,7 +1293,7 @@ var LOCAL_SPEC = {
         coerce: oneOf(BATTERY_POPOUT_DENSITIES)
     },
     batteryPopoutCards: {
-        def: "separate",
+        def: "combined",
         coerce: oneOf(BATTERY_POPOUT_CARDS)
     },
     batteryPopoutBadge: {
@@ -1304,6 +1304,9 @@ var LOCAL_SPEC = {
         def: true
     },
     batteryPopoutBattery: {
+        def: true
+    },
+    batteryPopoutStats: {
         def: true
     },
     batteryPopoutDetailsLayout: {
@@ -1318,7 +1321,7 @@ var LOCAL_SPEC = {
         def: true
     },
     batteryPopoutPowerStyle: {
-        def: "buttons",
+        def: "slider",
         coerce: oneOf(BATTERY_POPOUT_POWER_STYLES)
     },
     batteryPopoutDevices: {

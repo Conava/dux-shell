@@ -53,6 +53,14 @@ Item {
 
     property real shownValue: Math.max(0, root.value)
 
+    readonly property real actionsWidth: BatteryPopoutMetrics.button * (root.showEdit ? 2 : 1) + (root.showEdit ? Theme.spacingXXS : 0)
+    // The compact line is the only style with no padding of its own.
+    readonly property real contentPad: root.style === "compact" || !root.framed ? 0 : BatteryPopoutMetrics.pad
+    // Unframed, the shared card around the hero pads it, so the buttons reach back out into that padding.
+    readonly property real actionsInset: BatteryPopoutMetrics.heroActionsInset - (root.framed ? 0 : BatteryPopoutMetrics.pad)
+    // How far the buttons reach into the content from its trailing edge, plus a gap.
+    readonly property real actionsReserve: Math.max(0, root.actionsInset + root.actionsWidth - root.contentPad) + Theme.spacingS
+
     function pastLimit(color) {
         return Contrast.mix(color, Theme.scrimColor, BatteryPopoutMetrics.pastLimitShade);
     }
@@ -382,6 +390,14 @@ Item {
         }
     }
 
+    HeroActions {
+        visible: root.style !== "card"
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: root.actionsInset
+        anchors.rightMargin: root.actionsInset
+    }
+
     Component {
         id: lineFull
 
@@ -399,7 +415,7 @@ Item {
 
                     StyledText {
                         anchors.left: parent.left
-                        anchors.right: lineActions.left
+                        anchors.right: lineBadge.left
                         anchors.rightMargin: Theme.spacingS
                         text: root.status
                         elide: Text.ElideRight
@@ -411,6 +427,7 @@ Item {
                     HeroBadge {
                         id: lineBadge
                         anchors.right: parent.right
+                        anchors.rightMargin: root.actionsReserve
                         kind: root.badgeKind
                         icon: root.source.icon ?? ""
                         fill: root.badgeFill
@@ -418,12 +435,6 @@ Item {
                         value: root.value
                         ringColor: root.accent
                         ringTrack: Theme.secondaryContainer
-                    }
-
-                    HeroActions {
-                        id: lineActions
-                        anchors.right: lineBadge.left
-                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
@@ -488,8 +499,8 @@ Item {
                         sub: root.timeLine
                     }
 
-                    HeroActions {
-                        Layout.alignment: Qt.AlignTop
+                    Item {
+                        Layout.preferredWidth: Math.max(0, root.actionsReserve - Theme.spacingL)
                     }
                 }
 
@@ -519,11 +530,6 @@ Item {
 
                     RingCenter {}
                 }
-            }
-
-            HeroActions {
-                anchors.top: parent.top
-                anchors.right: parent.right
             }
         }
     }
@@ -589,8 +595,8 @@ Item {
                         }
                     }
 
-                    HeroActions {
-                        Layout.alignment: Qt.AlignTop
+                    Item {
+                        Layout.preferredWidth: Math.max(0, root.actionsReserve - Theme.spacingXL)
                     }
                 }
             }
@@ -631,7 +637,9 @@ Item {
                         sub: root.timeLine
                     }
 
-                    HeroActions {}
+                    Item {
+                        Layout.preferredWidth: Math.max(0, root.actionsReserve - Theme.spacingM)
+                    }
                 }
             }
         }
@@ -665,7 +673,7 @@ Item {
                             sub: root.timeLine,
                             numberSize: root.compact ? BatteryPopoutMetrics.smallNumberSize : Theme.fontSizeDisplayLarge,
                             reserve: root.compact ? 0 : cardBadge.width + Theme.spacingS,
-                            actionsWidth: BatteryPopoutMetrics.button + (root.showEdit ? BatteryPopoutMetrics.button + Theme.spacingXXS : 0)
+                            actionsWidth: root.actionsWidth
                         })
 
                     function inkAt(item) {

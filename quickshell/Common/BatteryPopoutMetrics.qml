@@ -44,6 +44,7 @@ Singleton {
     readonly property real gaugeStroke: Theme.spacingXS
     readonly property real barStroke: 6
     readonly property real heroStroke: Theme.spacingS
+    readonly property real heroActionsInset: Theme.spacingXS
     readonly property real badge: Theme.minimumTouchTargetSize
     readonly property real badgeCut: 1.5
     readonly property real wavelength: 40

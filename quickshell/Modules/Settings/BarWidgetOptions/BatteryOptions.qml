@@ -258,7 +258,7 @@ Column {
         iconName: "battery_full"
         title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
         settingKey: "batteryPopoutBatteryCard"
-        tags: ["battery", "popout", "section", "style", "badge", "compact", "line", "ring", "card", "details", "layout", "health", "temperature", "capacity", "power"]
+        tags: ["battery", "popout", "section", "style", "badge", "compact", "line", "ring", "card"]
         visible: BatteryService.batteryAvailable || BatteryService.popoutHasHero
 
         SettingsButtonGroupRow {
@@ -292,12 +292,27 @@ Column {
             checked: SettingsData.batteryPopoutBattery
             onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
         }
+    }
+
+    SettingsCard {
+        iconName: "analytics"
+        title: I18n.tr("Statistics", "battery settings: card title for the popout health, capacity and power stats")
+        settingKey: "batteryPopoutStatsCard"
+        tags: ["battery", "popout", "statistics", "stats", "details", "layout", "health", "temperature", "capacity", "power"]
+        visible: BatteryService.batteryAvailable
+
+        SettingsToggleRow {
+            settingKey: "batteryPopoutStats"
+            tags: ["battery", "popout", "statistics", "stats", "show", "hide"]
+            text: I18n.tr("Show", "battery settings: show this popout section")
+            checked: SettingsData.batteryPopoutStats
+            onToggled: checked => SettingsData.set("batteryPopoutStats", checked)
+        }
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutDetailsLayout"
             tags: ["battery", "popout", "details", "layout", "grid", "compact", "chips", "list"]
-            visible: BatteryService.batteryAvailable
-            enabled: SettingsData.batteryPopoutBattery
+            enabled: SettingsData.batteryPopoutStats && SettingsData.batteryPopoutBattery
             text: I18n.tr("Layout", "battery settings: layout of this popout section")
             model: root.layoutLabels
             values: Spec.BATTERY_POPOUT_LAYOUTS
@@ -310,8 +325,7 @@ Column {
             settingKey: "batteryPopoutDetails"
             tags: ["battery", "popout", "details", "health", "temperature", "capacity", "power"]
             text: I18n.tr("Details", "battery settings: which detail tiles the popout shows")
-            visible: BatteryService.batteryAvailable
-            enabled: SettingsData.batteryPopoutBattery
+            enabled: SettingsData.batteryPopoutStats && SettingsData.batteryPopoutBattery
             selectionMode: "multi"
             model: root.detailLabels
             checkEnabled: false

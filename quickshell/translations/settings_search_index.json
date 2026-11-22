@@ -12020,7 +12020,7 @@
     "optionFile": "IslandOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:21",
+    "section": "barWidgetOption:BatteryOptions.qml:22",
     "label": "Details",
     "tabIndex": 22,
     "keywords": [],
@@ -12028,7 +12028,7 @@
     "optionFile": "BatteryOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:23",
+    "section": "barWidgetOption:BatteryOptions.qml:24",
     "label": "Devices",
     "tabIndex": 22,
     "keywords": [],
@@ -12389,7 +12389,7 @@
     "optionFile": "AppsDockOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:20",
+    "section": "barWidgetOption:BatteryOptions.qml:21",
     "label": "Layout",
     "tabIndex": 22,
     "keywords": [],
@@ -12685,7 +12685,7 @@
     "optionFile": "IslandOptions.qml"
   },
   {
-    "section": "barWidgetOption:BatteryOptions.qml:22",
+    "section": "barWidgetOption:BatteryOptions.qml:23",
     "label": "Power profile",
     "tabIndex": 22,
     "keywords": [],
@@ -13011,6 +13011,14 @@
     "keywords": [],
     "runtimeType": "barWidgetOption",
     "optionFile": "IslandOptions.qml"
+  },
+  {
+    "section": "barWidgetOption:BatteryOptions.qml:20",
+    "label": "Statistics",
+    "tabIndex": 22,
+    "keywords": [],
+    "runtimeType": "barWidgetOption",
+    "optionFile": "BatteryOptions.qml"
   },
   {
     "section": "barWidgetOption:IslandOptions.qml:5",

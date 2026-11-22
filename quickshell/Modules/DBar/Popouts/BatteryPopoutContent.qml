@@ -64,7 +64,7 @@ Item {
     }
     readonly property var shownStats: {
         const keys = root.detailKeys;
-        if (!root.showBattery || !BatteryService.hasBatteryReading)
+        if (!root.statsEnabled || !root.showBattery || !BatteryService.hasBatteryReading)
             return [];
         return root.stats.filter(stat => keys.indexOf(stat.key) >= 0);
     }
@@ -90,7 +90,8 @@ Item {
     // Hidden until a device is listed during this open, so a laptop without peripherals gets no empty section
     property bool devicesSeen: false
     readonly property bool showDevices: root.devicesSeen && SettingsData.batteryPopoutDevices
-    readonly property bool factsBeside: BatteryPopoutMetrics.style === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
+    readonly property bool statsEnabled: SettingsData.batteryPopoutStats
+    readonly property bool factsBeside: root.statsEnabled && BatteryPopoutMetrics.style === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
     readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
     readonly property bool hasStats: root.statsModel.length > 0
     readonly property bool showGroup: root.showPower || root.hasStats
@@ -159,7 +160,7 @@ Item {
         BatteryService.removeRef();
     }
 
-    readonly property bool wantsTemperature: root.active && root.showBattery && root.detailKeys.indexOf("temperature") >= 0
+    readonly property bool wantsTemperature: root.active && root.showBattery && root.statsEnabled && root.detailKeys.indexOf("temperature") >= 0
 
     function syncTemperatureRef(wanted) {
         if (wanted === temperatureRefHeld)

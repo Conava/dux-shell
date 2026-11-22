@@ -28,6 +28,8 @@ Item {
     property color colorOverride: "transparent"
     // One number in a single readable color over the whole solid body.
     property bool singleTextColor: false
+    // Reserve the cap/bolt space on the leading side too, so the body sits centered in its background.
+    property bool balanceEnds: false
 
     readonly property bool outlined: root.meterStyle === "outline"
     readonly property bool ring: root.meterStyle === "ring"
@@ -106,11 +108,13 @@ Item {
     readonly property real boltBadgeWidth: Math.round(root.boltBadgeSize * root.boltAspect)
     readonly property real bodyLength: Math.max(Math.round(root.bodyUnits * root.unit), Math.ceil(root.numberInside ? root.textNeed + root.textCanvasLeft + 1.5 * root.unit : 0))
     readonly property real capGap: Math.max(1, Math.round(root.capGapUnits * root.unit))
-    readonly property real capOffset: root.bodyLength + root.capGap
+    readonly property real endLength: root.capGap + (root.boltVisible ? root.boltBadgeWidth : root.capBreadth)
+    readonly property real lead: root.balanceEnds && !root.vertical && !root.circular ? root.endLength : 0
+    readonly property real capOffset: root.lead + root.bodyLength + root.capGap
     readonly property real capBreadth: Math.max(1, Math.round(root.capBreadthUnits * root.unit))
     readonly property real capSpan: Math.round(6 * root.unit)
 
-    implicitWidth: root.circular ? root.ringDiameter : root.vertical ? Math.round(14 * root.unit) : root.capOffset + (root.boltVisible ? root.boltBadgeWidth : root.capBreadth)
+    implicitWidth: root.circular ? root.ringDiameter : root.vertical ? Math.round(14 * root.unit) : root.capOffset + (root.boltVisible ? root.boltBadgeWidth : root.capBreadth) + root.lead
     implicitHeight: root.circular ? root.ringDiameter : root.vertical ? root.capOffset + root.capBreadth : Math.round(14 * root.unit)
 
     StyledTextMetrics {
@@ -340,7 +344,7 @@ Item {
     Rectangle {
         id: frame
 
-        x: 0
+        x: root.lead
         y: root.vertical ? root.height - root.bodyLength : 0
         width: root.vertical ? root.width : root.bodyLength
         height: root.vertical ? root.bodyLength : root.height
@@ -401,7 +405,7 @@ Item {
 
         NumericText {
             visible: root.numberInside
-            x: root.textCanvasLeft + (root.textCanvasWidth - width) / 2
+            x: root.lead + root.textCanvasLeft + (root.textCanvasWidth - width) / 2
             y: root.textBaseline - baselineOffset
             text: root.numberText
             color: glyphs.ink
