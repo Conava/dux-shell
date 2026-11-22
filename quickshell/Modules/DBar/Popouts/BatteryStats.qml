@@ -38,12 +38,7 @@ Item {
             id: summary
 
             readonly property real innerWidth: width - pad * 2
-            readonly property real naturalWidth: {
-                let total = BatteryPopoutMetrics.statsGap * Math.max(0, root.count - 1);
-                for (let i = 0; i < summaryEntries.count; i++)
-                    total += summaryEntries.itemAt(i)?.implicitWidth ?? 0;
-                return total;
-            }
+            readonly property real naturalWidth: measureRow.implicitWidth
             readonly property bool wrapped: root.count > 2 && naturalWidth > innerWidth
             readonly property int columns: wrapped ? 2 : root.columns
             readonly property bool cells: root.spread || wrapped
@@ -56,26 +51,53 @@ Item {
             bottomLeftRadius: root.bottomRadius
             bottomRightRadius: root.bottomRadius
 
-            Grid {
-                id: summaryGrid
-                anchors.horizontalCenter: parent.horizontalCenter
-                columns: summary.columns
-                columnSpacing: summary.cells ? 0 : BatteryPopoutMetrics.statsGap
-                rowSpacing: Theme.spacingM
+            Row {
+                id: measureRow
+                visible: false
+                spacing: BatteryPopoutMetrics.statsGap
 
                 Repeater {
-                    id: summaryEntries
                     model: root.model
 
                     SummaryEntry {
                         required property var modelData
 
-                        width: summary.cells ? Math.floor(summary.innerWidth / summary.columns) : implicitWidth
                         label: modelData.label
                         value: modelData.value
                         iconName: modelData.icon
                         ratio: modelData.ratio ?? -1
-                        bad: modelData.bad === true
+                    }
+                }
+            }
+
+            Column {
+                id: summaryGrid
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Theme.spacingM
+
+                Repeater {
+                    model: Math.ceil(root.count / summary.columns)
+
+                    Row {
+                        required property int index
+
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: summary.cells ? 0 : BatteryPopoutMetrics.statsGap
+
+                        Repeater {
+                            model: root.model.slice(parent.index * summary.columns, (parent.index + 1) * summary.columns)
+
+                            SummaryEntry {
+                                required property var modelData
+
+                                width: summary.cells ? Math.floor(summary.innerWidth / summary.columns) : implicitWidth
+                                label: modelData.label
+                                value: modelData.value
+                                iconName: modelData.icon
+                                ratio: modelData.ratio ?? -1
+                                bad: modelData.bad === true
+                            }
+                        }
                     }
                 }
             }
