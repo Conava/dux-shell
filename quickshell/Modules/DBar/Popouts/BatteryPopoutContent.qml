@@ -94,8 +94,7 @@ Item {
     readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
     readonly property bool hasStats: root.statsModel.length > 0
     readonly property bool showGroup: root.showPower || root.hasStats
-    readonly property bool combined: BatteryPopoutMetrics.combined
-    readonly property bool chipsInPower: !root.combined && root.showPower && root.hasStats && SettingsData.batteryPopoutDetailsLayout === "chips"
+    readonly property bool chipsInPower: !BatteryPopoutMetrics.combined && root.showPower && root.hasStats && SettingsData.batteryPopoutDetailsLayout === "chips"
     readonly property bool standaloneStats: root.hasStats && !root.chipsInPower
     readonly property var heroSource: {
         if (root.showBattery) {
@@ -324,28 +323,24 @@ Item {
                 }
             }
 
-            DCard {
+            BatteryCard {
                 id: stack
 
-                readonly property bool shared: root.combined
-
+                framed: BatteryPopoutMetrics.combined
                 width: parent.width
                 height: stackColumn.implicitHeight + pad * 2
                 visible: root.hasHero || root.showGroup
-                pad: shared ? BatteryPopoutMetrics.pad : 0
-                color: shared ? surfaceColor : "transparent"
-                border.width: shared ? Theme.layerOutlineWidth : 0
                 restRadius: Theme.cornerRadiusL
 
                 Column {
                     id: stackColumn
                     width: parent.width
-                    spacing: stack.shared ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
+                    spacing: BatteryPopoutMetrics.combined ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
 
                     BatteryHero {
                         width: parent.width
                         visible: root.hasHero
-                        framed: !stack.shared
+                        framed: !BatteryPopoutMetrics.combined
                         source: root.heroSource
                         facts: root.heroFacts
                         factsBeside: root.factsBeside
@@ -358,7 +353,7 @@ Item {
                     }
 
                     SectionLabel {
-                        visible: !stack.shared && (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
+                        visible: (!BatteryPopoutMetrics.combined || !root.hasHero) && (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
                         topPadding: root.hasHero ? BatteryPopoutMetrics.labelTop - Theme.groupedListGap : 0
                         bottomPadding: BatteryPopoutMetrics.labelGap - Theme.groupedListGap
                         text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
@@ -367,12 +362,12 @@ Item {
                     Column {
                         id: group
                         width: parent.width
-                        spacing: stack.shared ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
+                        spacing: BatteryPopoutMetrics.combined ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
                         visible: root.showGroup
 
                         BatteryPowerProfile {
                             visible: root.showPower
-                            framed: !stack.shared
+                            framed: !BatteryPopoutMetrics.combined
                             showHeading: SettingsData.batteryPopoutPowerStyle === "slider"
                             active: root.active
                             footer: root.chipsInPower ? chipsFooter : null
@@ -386,7 +381,7 @@ Item {
                             width: parent.width
                             model: root.chipsInPower ? [] : root.statsModel
                             active: root.active
-                            framed: !stack.shared
+                            framed: !BatteryPopoutMetrics.combined
                             spread: !root.compactStyle
                             topRadius: root.showPower || root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
                             bottomRadius: Theme.groupedListOuterRadius

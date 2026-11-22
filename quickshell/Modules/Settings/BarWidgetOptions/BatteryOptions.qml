@@ -239,6 +239,7 @@ Column {
             text: I18n.tr("Cards", "battery settings: whether the popout sections each get a card or share one")
             model: [I18n.tr("Separate", "battery settings: popout cards option, each section has its own card"), I18n.tr("Combined", "battery settings: popout cards option, level, power profile and details share one card")]
             values: Spec.BATTERY_POPOUT_CARDS
+            enabled: BatteryService.popoutHasHero
             value: SettingsData.batteryPopoutCards
             onValueSelected: value => SettingsData.set("batteryPopoutCards", value)
         }

@@ -7,13 +7,11 @@ import qs.Services
 import qs.DCommon.Widgets
 import qs.DCommon.Common as DCommon
 
-DCard {
+BatteryCard {
     id: root
 
     property bool active: false
     property bool showHeading: true
-    // Unframed, it sits inside a card that is drawn around it
-    property bool framed: true
     // Extra content as the last row of the card
     property Component footer: null
 
@@ -67,10 +65,7 @@ DCard {
 
     width: parent?.width ?? 0
     height: body.implicitHeight + pad * 2
-    pad: framed ? BatteryPopoutMetrics.pad : 0
     restRadius: Theme.cornerRadiusL
-    color: framed ? surfaceColor : "transparent"
-    border.width: framed ? Theme.layerOutlineWidth : 0
     visible: PowerProfileWatcher.available
     enabled: PowerProfileWatcher.available
     Component.onCompleted: Qt.callLater(() => settled = true)

@@ -72,10 +72,8 @@ Item {
         }
     }
 
-    component HeroCard: DCard {
-        pad: root.framed ? BatteryPopoutMetrics.pad : 0
-        color: root.framed ? surfaceColor : "transparent"
-        border.width: root.framed ? Theme.layerOutlineWidth : 0
+    component HeroCard: BatteryCard {
+        framed: root.framed
         restRadius: Theme.cornerRadiusL
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius

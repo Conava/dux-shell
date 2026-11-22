@@ -191,10 +191,8 @@ Item {
         }
     }
 
-    component FrameCard: DCard {
-        pad: root.framed ? BatteryPopoutMetrics.pad : 0
-        color: root.framed ? surfaceColor : "transparent"
-        border.width: root.framed ? Theme.layerOutlineWidth : 0
+    component FrameCard: BatteryCard {
+        framed: root.framed
         restRadius: Theme.groupedListInnerRadius
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius
@@ -287,7 +285,7 @@ Item {
         }
     }
 
-    component StatRow: DCard {
+    component StatRow: BatteryCard {
         id: row
         property string label: ""
         property string value: ""
@@ -296,9 +294,8 @@ Item {
         property bool bad: false
         property var radii
 
+        framed: root.framed
         pad: 0
-        color: root.framed ? surfaceColor : "transparent"
-        border.width: root.framed ? Theme.layerOutlineWidth : 0
         height: Math.max(BatteryPopoutMetrics.row, rowContent.implicitHeight + Theme.spacingXS * 2)
         restRadius: Theme.groupedListInnerRadius
         topLeftRadius: radii?.topLeft ?? restRadius
@@ -311,8 +308,8 @@ Item {
         RowLayout {
             id: rowContent
             anchors.fill: parent
-            anchors.leftMargin: Theme.spacingM
-            anchors.rightMargin: Theme.spacingM
+            anchors.leftMargin: root.framed ? Theme.spacingM : 0
+            anchors.rightMargin: root.framed ? Theme.spacingM : 0
             anchors.topMargin: Theme.spacingXS
             anchors.bottomMargin: Theme.spacingXS
             spacing: Theme.spacingM
