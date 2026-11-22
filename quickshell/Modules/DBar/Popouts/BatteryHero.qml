@@ -18,7 +18,6 @@ Item {
     property var facts: []
     property bool factsBeside: false
     property bool showEdit: true
-    property Component footer: null
     property bool active: false
     property real topRadius: Theme.cornerRadiusL
     property real bottomRadius: Theme.cornerRadiusL
@@ -257,11 +256,6 @@ Item {
         }
     }
 
-    component HeroFooter: Loader {
-        height: (item as Item)?.implicitHeight ?? 0
-        visible: item !== null
-    }
-
     component HeroActions: Row {
         id: actions
 
@@ -455,11 +449,6 @@ Item {
                 HeroLine {
                     width: parent.width
                 }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
-                }
             }
         }
     }
@@ -508,11 +497,6 @@ Item {
                     width: parent.width
                     hatch: !compactCard.framed
                 }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
-                }
             }
         }
     }
@@ -534,11 +518,6 @@ Item {
                     height: width
 
                     RingCenter {}
-                }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
                 }
             }
 
@@ -614,11 +593,6 @@ Item {
                         Layout.alignment: Qt.AlignTop
                     }
                 }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
-                }
             }
         }
     }
@@ -658,11 +632,6 @@ Item {
                     }
 
                     HeroActions {}
-                }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
                 }
             }
         }
@@ -786,11 +755,6 @@ Item {
                         y: root.compact ? (cardTrack.height - height) / 2 : cardTrack.height - height - Theme.spacingS
                         inkFor: item => cardTrack.inkAt(item)
                     }
-                }
-
-                HeroFooter {
-                    width: parent.width
-                    sourceComponent: root.footer
                 }
             }
         }

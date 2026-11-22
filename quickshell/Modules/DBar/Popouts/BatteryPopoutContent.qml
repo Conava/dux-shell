@@ -16,7 +16,7 @@ Item {
     property bool showEdit: true
     property string barId: ""
     property bool batteryRefHeld: false
-    property real contentPadding: PopoutMetrics.contentPadding
+    property real contentPadding: BatteryPopoutMetrics.pad
     readonly property var detailKeys: Array.from(SettingsData.batteryPopoutDetails ?? [])
     readonly property var historyDevice: BatteryService.usePreferred ? BatteryService.preferredDevice : BatteryService.device
     readonly property bool multipleBatteries: !BatteryService.usePreferred && BatteryService.batteries.length > 1
@@ -86,12 +86,14 @@ Item {
     readonly property bool hasHero: root.showBattery || root.heroDevice !== null
     readonly property bool showPower: SettingsData.batteryPopoutPower && PowerProfileWatcher.available
     readonly property bool compactStyle: SettingsData.batteryPopoutStyle === "compact"
-    readonly property bool powerInHero: root.showPower && root.hasHero && !root.compactStyle && SettingsData.batteryPopoutPowerPlacement === "overview"
-    readonly property bool powerInList: root.showPower && !root.powerInHero
+    readonly property bool heroCard: root.hasHero && !root.compactStyle
     // Hidden until a device is listed during this open, so a laptop without peripherals gets no empty section
     property bool devicesSeen: false
     readonly property bool showDevices: root.devicesSeen && SettingsData.batteryPopoutDevices
     readonly property bool factsBeside: SettingsData.batteryPopoutStyle === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
+    readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
+    readonly property bool hasStats: root.statsModel.length > 0
+    readonly property bool showGroup: root.showPower || root.hasStats
     readonly property var heroSource: {
         if (root.showBattery) {
             const unknown = !BatteryService.hasBatteryReading;
@@ -278,7 +280,7 @@ Item {
             x: root.contentPadding
             y: root.contentPadding
             width: parent.width - root.contentPadding * 2
-            spacing: PopoutMetrics.contentGap
+            spacing: BatteryPopoutMetrics.sectionGap
 
             SettingsGroup {
                 visible: typeof PowerProfiles !== "undefined" && PowerProfiles.degradationReason !== PerformanceDegradationReason.None
@@ -318,53 +320,41 @@ Item {
                     active: root.active
                     showEdit: root.showEdit
                     topRadius: Theme.groupedListOuterRadius
-                    bottomRadius: group.hasStats || root.powerInList ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                    bottomRadius: root.showGroup ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
                     onSettingsRequested: root.openSettings()
                     onEditRequested: root.openWidgetSettings()
-                    footer: root.powerInHero ? powerFooter : null
                 }
 
                 SectionLabel {
-                    visible: root.compactStyle && group.height > 0
+                    visible: root.compactStyle && root.showGroup
                     topPadding: root.hasHero ? Theme.spacingXL - Theme.groupedListGap : 0
                     bottomPadding: Theme.spacingS - Theme.groupedListGap
                     text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
                 }
 
-                Item {
+                Column {
                     id: group
-                    readonly property bool heroCard: root.hasHero && !root.compactStyle
-                    readonly property bool hasStats: stats.count > 0
-                    readonly property real outer: Theme.groupedListOuterRadius
-                    readonly property real inner: Theme.groupedListInnerRadius
-                    readonly property real powerTop: root.compactStyle || !heroCard && !group.hasStats ? outer : inner
-                    readonly property real powerBottom: root.compactStyle && group.hasStats ? inner : outer
-
                     width: parent.width
-                    height: (root.powerInList ? power.height : 0) + (group.hasStats ? stats.height : 0) + (root.powerInList && group.hasStats ? Theme.groupedListGap : 0)
-                    visible: height > 0
+                    spacing: Theme.groupedListGap
+                    visible: root.showGroup
 
                     BatteryPowerProfile {
-                        id: power
-                        y: root.compactStyle || !group.hasStats ? 0 : stats.height + Theme.groupedListGap
-                        visible: root.powerInList
+                        visible: root.showPower
                         showHeading: SettingsData.batteryPopoutPowerStyle === "slider"
                         active: root.active
-                        topLeftRadius: group.powerTop
-                        topRightRadius: group.powerTop
-                        bottomLeftRadius: group.powerBottom
-                        bottomRightRadius: group.powerBottom
+                        topLeftRadius: root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                        topRightRadius: topLeftRadius
+                        bottomLeftRadius: root.hasStats ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                        bottomRightRadius: bottomLeftRadius
                     }
 
                     BatteryStats {
-                        id: stats
-                        y: root.compactStyle && root.powerInList ? power.height + Theme.groupedListGap : 0
                         width: parent.width
-                        model: root.factsBeside && root.showBattery ? [] : root.shownStats
+                        model: root.statsModel
                         active: root.active
                         spread: !root.compactStyle
-                        topRadius: (root.compactStyle ? root.powerInList : group.heroCard) ? group.inner : group.outer
-                        bottomRadius: !root.compactStyle && root.powerInList ? group.inner : group.outer
+                        topRadius: root.showPower || root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                        bottomRadius: Theme.groupedListOuterRadius
                     }
                 }
             }
@@ -473,7 +463,7 @@ Item {
 
                 SectionLabel {
                     visible: root.compactStyle
-                    topPadding: Theme.spacingXL - PopoutMetrics.contentGap
+                    topPadding: Theme.spacingXL - BatteryPopoutMetrics.sectionGap
                     text: I18n.tr("Devices")
                 }
 
@@ -517,21 +507,6 @@ Item {
                         onClicked: root.openWidgetSettings()
                     }
                 }
-            }
-        }
-    }
-
-    Component {
-        id: powerFooter
-
-        Item {
-            implicitHeight: embeddedPower.height
-
-            BatteryPowerProfile {
-                id: embeddedPower
-                showHeading: false
-                framed: false
-                active: root.active
             }
         }
     }

@@ -133,79 +133,32 @@ Item {
     Component {
         id: gridComp
 
-        DCard {
-            id: gridCard
+        Flow {
+            spacing: Theme.groupedListGap
 
-            readonly property int columns: Math.max(1, Math.min(root.count, BatteryPopoutMetrics.gridMaxColumns))
+            Repeater {
+                model: ScriptModel {
+                    values: root.items
+                    objectProp: "key"
+                }
 
-            implicitHeight: gridContent.implicitHeight + pad * 2
-            pad: BatteryPopoutMetrics.pad
-            restRadius: Theme.cornerRadiusL
+                delegate: BatteryTile {
+                    id: tile
 
-            Grid {
-                id: gridContent
+                    required property var modelData
+                    required index
 
-                readonly property real cellWidth: (width - columnSpacing * (gridCard.columns - 1)) / gridCard.columns
+                    count: root.count
+                    label: tile.modelData.name
+                    value: root.percentText(tile.modelData)
+                    valueColor: root.valueColor(tile.modelData)
+                    Accessible.name: root.accessibleName(tile.modelData)
 
-                width: parent.width
-                columns: gridCard.columns
-                columnSpacing: Theme.spacingXS
-                rowSpacing: Theme.spacingXS
-
-                Repeater {
-                    model: ScriptModel {
-                        values: root.items
-                        objectProp: "key"
-                    }
-
-                    delegate: Item {
-                        id: cell
-
-                        required property var modelData
-                        readonly property color accent: root.accent(cell.modelData)
-
-                        width: gridContent.cellWidth
-                        implicitHeight: cellName.y + cellName.implicitHeight
-                        Accessible.role: Accessible.StaticText
-                        Accessible.name: root.accessibleName(cell.modelData)
-
-                        LevelRing {
-                            id: cellRing
-                            x: (parent.width - width) / 2
-                            width: BatteryPopoutMetrics.deviceRing
-                            height: width
-                            device: cell.modelData
-                            accent: cell.accent
-                            cut: gridCard.color
-                            glyphSize: BatteryPopoutMetrics.gridGlyph
-                            startAngle: 135
-                            spanAngle: 270
-                        }
-
-                        StyledText {
-                            id: cellLevel
-                            x: (parent.width - width) / 2
-                            y: cellRing.height - BatteryPopoutMetrics.numberLift
-                            text: cell.modelData.unknown ? "–" : String(cell.modelData.percentage)
-                            font.pixelSize: Theme.fontSizeMedium
-                            font.weight: Theme.fontWeightMedium
-                            font.features: {
-                                "tnum": 1
-                            }
-                            color: Theme.surfaceText
-                        }
-
-                        StyledText {
-                            id: cellName
-                            y: cellLevel.y + cellLevel.implicitHeight
-                            width: parent.width
-                            text: cell.modelData.name
-                            font.pixelSize: Theme.fontSizeSmall
-                            color: Theme.onSurfaceVariant
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.NoWrap
-                            elide: Text.ElideRight
-                        }
+                    leading: DeviceGlyph {
+                        device: tile.modelData
+                        accent: root.accent(tile.modelData)
+                        cutColor: tile.color
+                        size: Theme.iconSizeLarge
                     }
                 }
             }
@@ -301,35 +254,26 @@ Item {
     Component {
         id: chipsComp
 
-        Flow {
-            id: chips
+        BatteryChipFlow {
+            model: ScriptModel {
+                values: root.items
+                objectProp: "key"
+            }
 
-            spacing: Theme.spacingXS
+            delegate: BatteryChip {
+                id: chip
 
-            Repeater {
-                model: ScriptModel {
-                    values: root.items
-                    objectProp: "key"
-                }
+                required property var modelData
 
-                delegate: DDetailChip {
-                    id: chip
+                value: root.percentText(chip.modelData)
+                valueColor: root.valueColor(chip.modelData)
+                Accessible.name: root.accessibleName(chip.modelData)
 
-                    required property var modelData
-                    readonly property color accent: root.accent(chip.modelData)
-
-                    implicitHeight: BatteryPopoutMetrics.chip
-                    maximumWidth: chips.width
-                    value: root.percentText(chip.modelData)
-                    valueColor: root.valueColor(chip.modelData)
-                    Accessible.name: root.accessibleName(chip.modelData)
-
-                    leading: DeviceGlyph {
-                        device: chip.modelData
-                        accent: chip.accent
-                        cutColor: chip.color
-                        size: BatteryPopoutMetrics.compactGlyph
-                    }
+                leading: DeviceGlyph {
+                    device: chip.modelData
+                    accent: root.accent(chip.modelData)
+                    cutColor: chip.color
+                    size: BatteryPopoutMetrics.compactGlyph
                 }
             }
         }

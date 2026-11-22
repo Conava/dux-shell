@@ -107,30 +107,14 @@ BasePill {
         return `${hoursStr}\n${minutesStr}`;
     }
 
-    readonly property string horizontalDisplayText: {
-        const parts = [];
-        if (percentVisible) {
-            parts.push(`${BatteryService.displayBatteryLevelText}%`);
-        }
-        if (showTime && batteryTimeText) {
-            parts.push(percentVisible ? `(${batteryTimeText})` : batteryTimeText);
-        }
-        if (batteryPowerText) {
-            parts.push(batteryPowerText);
-        }
-        return parts.join(" ");
-    }
-
     readonly property string horizontalSideText: {
-        if (!pillStyle) {
-            return horizontalDisplayText;
-        }
         const parts = [];
-        if (percentVisible && !percentInMeter) {
+        const percent = percentVisible && !(pillStyle && percentInMeter);
+        if (percent) {
             parts.push(`${BatteryService.displayBatteryLevelText}%`);
         }
         if (showTime && batteryTimeText) {
-            parts.push(batteryTimeText);
+            parts.push(percent ? `(${batteryTimeText})` : batteryTimeText);
         }
         if (batteryPowerText) {
             parts.push(batteryPowerText);
@@ -305,7 +289,7 @@ BasePill {
                                     neutralColor: Theme.widgetIconColor
                                     colorOverride: battery.critical ? battery.criticalForeground : "transparent"
                                     maxDiameter: battery.widgetThickness - Theme.spacingXS
-                                    maxLength: battery.meterAcross ? battery.widgetThickness - Theme.spacingXS : 0
+                                    maxLength: battery.meterAcross ? Math.min(battery.iconSize, battery.widgetThickness - Theme.spacingXS) : 0
                                     thickness: battery.iconSize
                                     fontSize: battery.textSize
                                 }

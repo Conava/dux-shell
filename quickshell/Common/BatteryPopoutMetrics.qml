@@ -4,29 +4,46 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    readonly property bool compact: Theme.densityLevel < 0
-    readonly property bool dense: Theme.densityLevel < -1
-    readonly property real spaciousStep: Math.max(0, Theme.densityLevel) * Theme.spacingXL
+    // The popout follows the shell density unless the battery setting overrides it.
+    readonly property int level: {
+        switch (SettingsData.batteryPopoutDensity) {
+        case "spacious":
+            return 1;
+        case "comfortable":
+            return 0;
+        case "compact":
+            return -1;
+        case "dense":
+            return -2;
+        default:
+            return Theme.densityLevel;
+        }
+    }
+    readonly property real stepXS: level * Theme.spacingXXS
+    readonly property real stepS: level * Theme.spacingXS
+    readonly property real stepM: level * Theme.spacingS
 
-    readonly property real pad: PopoutMetrics.contentPadding
-    readonly property real gap: dense ? Theme.spacingXS : Theme.spacingS + Theme.spacingXXS + Theme.densityStepXS
-    readonly property real tile: Theme.spacingM + Theme.densityStepS
-    readonly property real button: Theme.densityLevel > 0 ? Theme.minimumTouchTargetSize : dense ? Theme.buttonHeightXS : Theme.iconButtonSize
-    readonly property real powerButton: Theme.buttonHeightM + Theme.densityStepM
-    readonly property real row: dense ? Theme.buttonHeightS : Theme.buttonHeightM - Theme.spacingXS + Theme.densityStepS
-    readonly property real chip: Theme.densityLevel > 0 ? Theme.buttonHeightXS + Theme.spacingXS : dense ? Theme.buttonHeightXXS : Theme.buttonHeightXS
-    readonly property real deviceRing: Theme.buttonHeightM + Theme.spacingL + Theme.densityStepM
+    readonly property bool compact: level < 0
+    readonly property bool dense: level < -1
+    readonly property real spaciousStep: Math.max(0, level) * Theme.spacingXL
+
+    readonly property real pad: Theme.spacingL + stepS
+    readonly property real gap: dense ? Theme.spacingXS : Theme.spacingS + Theme.spacingXXS + stepXS
+    readonly property real sectionGap: Math.max(Theme.spacingS, Theme.spacingM + stepS)
+    readonly property real tile: Theme.spacingM + stepS
+    readonly property real button: level > 0 ? Theme.minimumTouchTargetSize : dense ? Theme.buttonHeightXS : Theme.iconButtonSize
+    readonly property real powerButton: Theme.buttonHeightM + stepM
+    readonly property real row: dense ? Theme.buttonHeightS : Theme.buttonHeightM - Theme.spacingXS + stepS
+    readonly property real chip: level > 0 ? Theme.buttonHeightXS + Theme.spacingXS : dense ? Theme.buttonHeightXXS : Theme.buttonHeightXS
     readonly property real compactRing: Theme.buttonHeightXS + Theme.spacingM
     readonly property real compactGlyph: Theme.iconSizeSmall + Theme.spacingXXS
-    readonly property real gridGlyph: Theme.iconSize - Theme.spacingXXS
     readonly property real boltCircle: Theme.iconSizeSmall + Theme.spacingS
-    readonly property real numberLift: Theme.spacingM + Theme.spacingXXS
     readonly property real compactIconSize: Theme.iconSizeSmall + Theme.spacingXS
 
     readonly property real heroSmall: Theme.buttonHeightM + (dense ? 0 : Theme.spacingL)
     readonly property real heroRing: 184 + spaciousStep
     readonly property real heroRingBeside: heroRing - Theme.iconButtonSize
-    readonly property real cardFill: compact ? heroSmall : 136 + Theme.densityLevel * Theme.spacingXL
+    readonly property real cardFill: compact ? heroSmall : 136 + level * Theme.spacingXL
     readonly property real smallNumberSize: dense ? Theme.fontSizeXXLarge : Theme.fontSizeDisplay
 
     readonly property real gaugeStroke: Theme.spacingXS
@@ -41,7 +58,6 @@ Singleton {
     readonly property real ringGap: Theme.spacingS
     readonly property real hatchPeriod: 10
     readonly property real statsGap: 40
-    readonly property int gridMaxColumns: 4
     // The cookie shapes draw into a texture this many times their size, which keeps their edges smooth.
     readonly property int shapeSupersampling: 4
 

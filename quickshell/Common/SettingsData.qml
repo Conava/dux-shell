@@ -806,13 +806,13 @@ Singleton {
     property int batteryCriticalNotificationType: Spec.SPEC.batteryCriticalNotificationType.def
     property string batteryPopoutColor: Spec.SPEC.batteryPopoutColor.def
     property string batteryPopoutStyle: Spec.SPEC.batteryPopoutStyle.def
+    property string batteryPopoutDensity: Spec.SPEC.batteryPopoutDensity.def
     property string batteryPopoutBadge: Spec.SPEC.batteryPopoutBadge.def
     property bool batteryPopoutWavy: Spec.SPEC.batteryPopoutWavy.def
     property bool batteryPopoutBattery: Spec.SPEC.batteryPopoutBattery.def
     property string batteryPopoutDetailsLayout: Spec.SPEC.batteryPopoutDetailsLayout.def
     property var batteryPopoutDetails: Spec.SPEC.batteryPopoutDetails.def
     property bool batteryPopoutPower: Spec.SPEC.batteryPopoutPower.def
-    property string batteryPopoutPowerPlacement: Spec.SPEC.batteryPopoutPowerPlacement.def
     property string batteryPopoutPowerStyle: Spec.SPEC.batteryPopoutPowerStyle.def
     property bool batteryPopoutDevices: Spec.SPEC.batteryPopoutDevices.def
     property string batteryPopoutDevicesLayout: Spec.SPEC.batteryPopoutDevicesLayout.def

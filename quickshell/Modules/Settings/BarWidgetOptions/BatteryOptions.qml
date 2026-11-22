@@ -2,6 +2,7 @@ import QtQuick
 import qs.Common
 import qs.Services
 import qs.Modules.Settings.Widgets
+import qs.Modules.DBar.Popouts
 import "../../../Common/settings/SettingsSpec.js" as Spec
 
 Column {
@@ -32,16 +33,45 @@ Column {
 
     readonly property var layoutLabels: [I18n.tr("Grid", "battery settings: popout section layout option"), I18n.tr("Compact", "battery settings: popout section layout option, tighter than grid"), I18n.tr("Chips", "battery popout layout: small chips with icon and value"), I18n.tr("List", "battery settings: popout section layout option")]
     readonly property var deviceLayoutLabels: layoutLabels.concat([I18n.tr("Bars", "battery popout devices layout: rows filled to the battery level")])
-    readonly property var detailLabels: [I18n.tr("Health", "noun, battery health percentage label"), I18n.tr("Temperature", "battery temperature"), I18n.tr("Capacity", "battery energy capacity stat label"), I18n.tr("Power", "battery stat label, charge or discharge rate in watts", true)]
+    readonly property var detailLabelByKey: ({
+            "health": I18n.tr("Health", "noun, battery health percentage label"),
+            "temperature": I18n.tr("Temperature", "battery temperature"),
+            "capacity": I18n.tr("Capacity", "battery energy capacity stat label"),
+            "power": I18n.tr("Power", "battery stat label, charge or discharge rate in watts", true)
+        })
+    // Same reading the popout uses to decide whether it can show a temperature tile.
+    readonly property bool hasTemperature: temperatureReader.temperature !== 0
+    readonly property var detailKeys: Spec.BATTERY_POPOUT_DETAILS.filter(key => key !== "temperature" || hasTemperature)
+    readonly property var detailLabels: detailKeys.map(key => detailLabelByKey[key])
+    readonly property bool compactPopout: BatteryPopoutMetrics.compact
+    // Line falls back to the compact look at compact densities, so it is not offered there.
+    readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(compactPopout && key === "line"))
+    readonly property string effectiveStyle: compactPopout && SettingsData.batteryPopoutStyle === "line" ? "compact" : SettingsData.batteryPopoutStyle
+    readonly property var styleLabelByKey: ({
+            "compact": I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"),
+            "line": I18n.tr("Line", "battery settings: popout gauge style option"),
+            "ring": I18n.tr("Ring", "noun, battery widget ring gauge style option"),
+            "card": I18n.tr("Card", "battery settings: popout gauge style option, filled card")
+        })
 
     function shownDetailLabels() {
         const shown = SettingsData.batteryPopoutDetails;
-        return detailLabels.filter((label, i) => shown.indexOf(Spec.BATTERY_POPOUT_DETAILS[i]) >= 0);
+        return detailLabels.filter((label, i) => shown.indexOf(detailKeys[i]) >= 0);
     }
 
+    // Keeps a hidden Temperature choice saved while the battery reports none.
     function setDetail(index, selected) {
         const shown = SettingsData.batteryPopoutDetails;
-        SettingsData.set("batteryPopoutDetails", Spec.BATTERY_POPOUT_DETAILS.filter((key, i) => i === index ? selected : shown.indexOf(key) >= 0));
+        SettingsData.set("batteryPopoutDetails", Spec.BATTERY_POPOUT_DETAILS.filter(key => key === detailKeys[index] ? selected : shown.indexOf(key) >= 0));
+    }
+
+    BatteryHistory {
+        id: temperatureReader
+
+        visible: false
+        active: root.visible && BatteryService.batteryAvailable
+        nativePath: (BatteryService.usePreferred ? BatteryService.preferredDevice : BatteryService.device)?.nativePath ?? ""
+        historyEnabled: false
     }
 
     SettingsCard {
@@ -182,7 +212,7 @@ Column {
         iconName: "web_asset"
         title: I18n.tr("Popout", "battery settings: card title for the battery popout appearance")
         settingKey: "batteryPopout"
-        tags: ["battery", "popout", "appearance", "color", "style", "wavy", "wave", "compact", "line", "ring", "card"]
+        tags: ["battery", "popout", "appearance", "color", "density", "spacious", "comfortable", "compact", "dense"]
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutColor"
@@ -195,19 +225,48 @@ Column {
         }
 
         SettingsButtonGroupRow {
+            settingKey: "batteryPopoutDensity"
+            tags: ["battery", "popout", "density", "spacious", "comfortable", "compact", "dense", "spacing", "size"]
+            text: I18n.tr("Interface density", "interface density setting label")
+            model: [I18n.tr("Default", "battery popout density option that follows the shell's interface density"), I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Comfortable", "interface density option with the default spacing"), I18n.tr("Compact", "interface density option fitting the most items on screen"), I18n.tr("Dense", "interface density option denser than compact for small text and tight rows")]
+            values: Spec.BATTERY_POPOUT_DENSITIES
+            value: SettingsData.batteryPopoutDensity
+            fallbackValue: "shell"
+            onValueSelected: value => SettingsData.set("batteryPopoutDensity", value)
+        }
+    }
+
+    SettingsCard {
+        iconName: "battery_full"
+        title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
+        settingKey: "batteryPopoutBatteryCard"
+        tags: ["battery", "popout", "section", "style", "badge", "wavy", "wave", "compact", "line", "ring", "card", "details", "layout", "health", "temperature", "capacity", "power"]
+        visible: BatteryService.batteryAvailable
+
+        SettingsToggleRow {
+            settingKey: "batteryPopoutBattery"
+            tags: ["battery", "popout", "section", "show", "hide"]
+            text: I18n.tr("Show", "battery settings: show this popout section")
+            checked: SettingsData.batteryPopoutBattery
+            onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
+        }
+
+        SettingsButtonGroupRow {
             settingKey: "batteryPopoutStyle"
             tags: ["battery", "popout", "style", "compact", "line", "ring", "card"]
+            enabled: SettingsData.batteryPopoutBattery
             text: I18n.tr("Style", "battery settings: style of the battery popout gauge")
-            model: [I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"), I18n.tr("Line", "battery settings: popout gauge style option"), I18n.tr("Ring", "noun, battery widget ring gauge style option"), I18n.tr("Card", "battery settings: popout gauge style option, filled card")]
-            values: Spec.BATTERY_POPOUT_STYLES
-            value: SettingsData.batteryPopoutStyle
+            model: root.styleKeys.map(key => root.styleLabelByKey[key])
+            values: root.styleKeys
+            value: root.effectiveStyle
             onValueSelected: value => SettingsData.set("batteryPopoutStyle", value)
         }
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutBadge"
             tags: ["battery", "popout", "badge", "shape", "ring", "icon"]
-            visible: SettingsData.batteryPopoutStyle === "line" || SettingsData.batteryPopoutStyle === "card"
+            visible: !root.compactPopout && (root.effectiveStyle === "line" || root.effectiveStyle === "card")
+            enabled: SettingsData.batteryPopoutBattery
             text: I18n.tr("Badge", "battery settings: shape behind the battery icon in the popout")
             model: [I18n.tr("Shape", "battery settings: popout badge option, filled shape"), I18n.tr("Ring", "noun, battery widget ring gauge style option")]
             values: Spec.BATTERY_POPOUT_BADGES
@@ -218,25 +277,11 @@ Column {
         SettingsToggleRow {
             settingKey: "batteryPopoutWavy"
             tags: ["battery", "popout", "wavy", "wave", "charging", "animation"]
-            text: I18n.tr("Wavy", "battery popout: wavy level indicator while charging")
+            visible: root.effectiveStyle !== "card"
+            enabled: SettingsData.batteryPopoutBattery
+            text: I18n.tr("Wavy when charging", "battery popout: wavy level indicator while charging")
             checked: SettingsData.batteryPopoutWavy
             onToggled: checked => SettingsData.set("batteryPopoutWavy", checked)
-        }
-    }
-
-    SettingsCard {
-        iconName: "battery_full"
-        title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
-        settingKey: "batteryPopoutBatteryCard"
-        tags: ["battery", "popout", "section", "size", "details", "layout", "health", "temperature", "capacity", "power"]
-        visible: BatteryService.batteryAvailable
-
-        SettingsToggleRow {
-            settingKey: "batteryPopoutBattery"
-            tags: ["battery", "popout", "section", "show", "hide"]
-            text: I18n.tr("Show", "battery settings: show this popout section")
-            checked: SettingsData.batteryPopoutBattery
-            onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
         }
 
         SettingsButtonGroupRow {
@@ -294,25 +339,13 @@ Column {
             value: SettingsData.batteryPopoutPowerStyle
             onValueSelected: value => SettingsData.set("batteryPopoutPowerStyle", value)
         }
-
-        SettingsButtonGroupRow {
-            settingKey: "batteryPopoutPowerPlacement"
-            tags: ["battery", "popout", "power", "profile", "placement", "card", "overview"]
-            visible: SettingsData.batteryPopoutStyle !== "compact"
-            enabled: SettingsData.batteryPopoutPower
-            text: I18n.tr("Placement", "battery settings: where the popout power profile control sits")
-            model: [I18n.tr("Separate", "battery settings: popout power profile placement option, own card"), I18n.tr("Overview", "battery settings: popout power profile placement option, inside the overview card")]
-            values: Spec.BATTERY_POPOUT_POWER_PLACEMENTS
-            value: SettingsData.batteryPopoutPowerPlacement
-            onValueSelected: value => SettingsData.set("batteryPopoutPowerPlacement", value)
-        }
     }
 
     SettingsCard {
         iconName: "devices"
         title: I18n.tr("Devices", "battery settings: card title for the popout devices section")
         settingKey: "batteryPopoutDevicesCard"
-        tags: ["battery", "popout", "section", "devices", "peripherals", "mouse", "keyboard", "headphones", "size", "layout"]
+        tags: ["battery", "popout", "section", "devices", "peripherals", "mouse", "keyboard", "headphones", "layout"]
 
         SettingsToggleRow {
             settingKey: "batteryPopoutDevices"

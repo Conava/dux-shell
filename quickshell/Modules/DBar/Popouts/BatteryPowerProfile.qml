@@ -12,13 +12,18 @@ DCard {
 
     property bool active: false
     property bool showHeading: true
-    property bool framed: true
 
     readonly property string style: SettingsData.batteryPopoutPowerStyle
     readonly property bool slider: style === "slider"
     readonly property var profiles: PowerProfileWatcher.availableProfiles
     readonly property int currentIndex: profiles.indexOf(PowerProfileWatcher.currentProfile)
     readonly property int focusIndex: Math.max(0, Math.min(currentIndex, profiles.length - 1))
+    readonly property var profileShapes: ({
+            [PowerProfile.PowerSaver]: "puffy",
+            [PowerProfile.Balanced]: "cookie9",
+            [PowerProfile.Performance]: "burst"
+        })
+    readonly property var thumbShapes: ["puffy", "cookie9", "burst", "cookie4"]
     // Off until the first layout has settled, so nothing slides in when the popout opens
     property bool settled: false
     readonly property bool animate: active && settled && !Theme.reduceMotion
@@ -59,10 +64,10 @@ DCard {
 
     width: parent?.width ?? 0
     height: body.implicitHeight + pad * 2
-    pad: framed ? BatteryPopoutMetrics.pad : 0
+    pad: BatteryPopoutMetrics.pad
     restRadius: Theme.cornerRadiusL
-    color: framed ? surfaceColor : "transparent"
-    border.width: framed ? Theme.layerOutlineWidth : 0
+    color: surfaceColor
+    border.width: Theme.layerOutlineWidth
     visible: PowerProfileWatcher.available
     enabled: PowerProfileWatcher.available
     Component.onCompleted: Qt.callLater(() => settled = true)
@@ -289,8 +294,6 @@ DCard {
             // The cell whose keyboard focus ring shows; the thumb draws it when that cell is under it
             property int ringIndex: -1
             property int settledIndex: -1
-            // The cell the thumb is sliding away from: its icon stays hidden until the thumb arrives.
-            property int leavingIndex: -1
 
             implicitHeight: thumb.height
             Accessible.role: Accessible.Grouping
@@ -300,10 +303,18 @@ DCard {
             Keys.onPressed: event => root.stepWithArrows(event, sliderRepeater)
             Component.onCompleted: settledIndex = current
             onCurrentChanged: {
-                leavingIndex = settledIndex;
+                const previous = settledIndex;
                 settledIndex = current;
-                if (root.animate)
+                if (previous >= 0 && root.animate) {
+                    thumb.fromShape = thumb.shapeAt(previous);
+                    thumb.morph = 0;
+                    thumbMorph.restart();
                     thumbPop.restart();
+                } else {
+                    thumbMorph.stop();
+                    thumb.fromShape = thumb.shapeAt(current);
+                    thumb.morph = 1;
+                }
             }
 
             Rectangle {
@@ -326,8 +337,6 @@ DCard {
 
                         required property var modelData
                         required property int index
-                        // Hidden while any part of the thumb overlaps it, or it peeks out beside the thumb as it slides.
-                        readonly property bool covered: thumb.visible && Math.abs(thumb.x + thumb.width / 2 - stop.x - stop.width / 2) < (thumb.width + Theme.iconSize) / 2
 
                         width: slider.cell
                         height: slider.height
@@ -358,7 +367,6 @@ DCard {
 
                         DIcon {
                             anchors.centerIn: parent
-                            visible: !stop.covered && !(thumbSlide.running && stop.index === slider.leavingIndex)
                             name: Theme.getPowerProfileIcon(stop.modelData)
                             size: Theme.iconSize
                             color: Theme.onSurfaceVariant
@@ -376,6 +384,13 @@ DCard {
             Item {
                 id: thumb
                 readonly property string iconName: Theme.getPowerProfileIcon(root.profiles[slider.current])
+                readonly property string toShape: shapeAt(slider.current)
+                property string fromShape: toShape
+                property real morph: 1
+
+                function shapeAt(index) {
+                    return root.profileShapes[root.profiles[index]] ?? "cookie4";
+                }
 
                 visible: slider.current >= 0
                 width: Math.round(BatteryPopoutMetrics.powerButton * BatteryPopoutMetrics.sliderThumbRatio)
@@ -384,9 +399,7 @@ DCard {
 
                 Behavior on x {
                     enabled: root.animate
-                    DCommon.DAnim {
-                        id: thumbSlide
-                    }
+                    DCommon.DAnim {}
                 }
 
                 SequentialAnimation {
@@ -406,21 +419,21 @@ DCard {
                     }
                 }
 
-                DMaterialShape {
+                DMorphShape {
                     anchors.fill: parent
-                    shape: "clover4"
+                    shapes: root.thumbShapes
+                    from: thumb.fromShape
+                    to: thumb.toShape
+                    progress: thumb.morph
                     color: Theme.primary
-                    // A clover4 repeats every 90 degrees, so each step turns it while it slides and it lands looking the same
-                    rotation: Math.max(0, slider.current) * 90
-                    layer.enabled: thumb.visible
-                    layer.smooth: true
-                    layer.mipmap: true
-                    layer.textureSize: Qt.size(Math.ceil(width * BatteryPopoutMetrics.shapeSupersampling), Math.ceil(height * BatteryPopoutMetrics.shapeSupersampling))
+                }
 
-                    Behavior on rotation {
-                        enabled: root.animate
-                        DCommon.DAnim {}
-                    }
+                DCommon.DAnim {
+                    id: thumbMorph
+                    target: thumb
+                    property: "morph"
+                    from: 0
+                    to: 1
                 }
 
                 FocusRing {

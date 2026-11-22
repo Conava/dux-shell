@@ -85,26 +85,30 @@ Item {
     Component {
         id: gridComp
 
-        Grid {
-            id: tileGrid
-            columns: root.columns
-            columnSpacing: Theme.groupedListGap
-            rowSpacing: Theme.groupedListGap
+        Flow {
+            spacing: Theme.groupedListGap
 
             Repeater {
                 model: root.model
 
-                StatTile {
-                    required property var modelData
-                    required property int index
+                BatteryTile {
+                    id: tile
 
-                    width: (tileGrid.width - tileGrid.columnSpacing * (root.columns - 1)) / root.columns
-                    label: modelData.label
-                    value: modelData.value
-                    iconName: modelData.icon
-                    ratio: modelData.ratio ?? -1
-                    bad: modelData.bad === true
-                    radii: BatteryPopoutMetrics.cornerRadii(index, root.count, root.columns, root.topRadius, root.bottomRadius)
+                    required property var modelData
+                    required index
+
+                    count: root.count
+                    topRadius: root.topRadius
+                    bottomRadius: root.bottomRadius
+                    label: tile.modelData.label
+                    value: tile.modelData.value
+                    valueColor: tile.modelData.bad === true ? Theme.error : Theme.surfaceText
+
+                    leading: DIcon {
+                        name: tile.modelData.icon
+                        size: Theme.iconSizeLarge
+                        color: tile.modelData.bad === true ? Theme.error : Theme.primary
+                    }
                 }
             }
         }
@@ -113,21 +117,22 @@ Item {
     Component {
         id: chipsComp
 
-        Flow {
-            id: chipFlow
-            spacing: Theme.spacingXS
+        BatteryChipFlow {
+            model: root.model
 
-            Repeater {
-                model: root.model
+            delegate: BatteryChip {
+                id: chip
 
-                DDetailChip {
-                    required property var modelData
+                required property var modelData
 
-                    label: modelData.label
-                    value: modelData.value
-                    valueColor: modelData.bad === true ? Theme.error : Theme.surfaceText
-                    implicitHeight: BatteryPopoutMetrics.chip
-                    maximumWidth: chipFlow.width
+                value: chip.modelData.value
+                valueColor: chip.modelData.bad === true ? Theme.error : Theme.surfaceText
+                Accessible.name: chip.modelData.label + ": " + chip.modelData.value
+
+                leading: DIcon {
+                    name: chip.modelData.icon
+                    size: BatteryPopoutMetrics.compactGlyph
+                    color: chip.modelData.bad === true ? Theme.error : Theme.primary
                 }
             }
         }
@@ -236,66 +241,6 @@ Item {
                     wrapMode: Text.NoWrap
                     elide: Text.ElideRight
                 }
-            }
-        }
-    }
-
-    component StatTile: DCard {
-        id: tile
-        property string label: ""
-        property string value: ""
-        property string iconName: ""
-        property real ratio: -1
-        property bool bad: false
-        property var radii
-        readonly property real verticalPad: BatteryPopoutMetrics.tile
-
-        pad: 0
-        height: tileColumn.implicitHeight + verticalPad * 2
-        restRadius: Theme.groupedListInnerRadius
-        topLeftRadius: radii?.topLeft ?? restRadius
-        topRightRadius: radii?.topRight ?? restRadius
-        bottomLeftRadius: radii?.bottomLeft ?? restRadius
-        bottomRightRadius: radii?.bottomRight ?? restRadius
-        Accessible.role: Accessible.StaticText
-        Accessible.name: label + ": " + value
-
-        Column {
-            id: tileColumn
-            x: Theme.spacingXS
-            y: tile.verticalPad
-            width: parent.width - Theme.spacingXS * 2
-            spacing: Theme.spacingXS
-
-            StatGlyph {
-                anchors.horizontalCenter: parent.horizontalCenter
-                iconName: tile.iconName
-                ratio: tile.ratio
-                bad: tile.bad
-            }
-
-            StyledText {
-                width: parent.width
-                text: tile.value
-                font.pixelSize: Theme.fontSizeMedium
-                font.weight: Theme.fontWeightMedium
-                font.features: {
-                    "tnum": 1
-                }
-                color: tile.bad ? Theme.error : Theme.onSurface
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.NoWrap
-                elide: Text.ElideRight
-            }
-
-            StyledText {
-                width: parent.width
-                text: tile.label
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.onSurfaceVariant
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.NoWrap
-                elide: Text.ElideRight
             }
         }
     }

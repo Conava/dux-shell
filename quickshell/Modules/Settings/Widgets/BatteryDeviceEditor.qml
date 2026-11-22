@@ -16,8 +16,8 @@ SettingsReorderList {
 
     readonly property var rows: BatteryDevices.editorRows(saved, devices)
     readonly property var emptyRow: BatteryDevices.editorRow("", null, null)
-    readonly property var partKeys: ["icon", "percent", "lowOnly"]
-    readonly property var partLabels: [I18n.tr("Icon", "battery bar widget: show the device glyph"), I18n.tr("Percentage", "battery bar widget: show the charge number"), I18n.tr("Only when low", "battery bar widget: show the entry only at or below the low threshold")]
+    property string expandedId: ""
+    readonly property string lowOnlyLabel: I18n.tr("Only when low", "battery bar widget: show the entry only at or below the low threshold")
 
     signal entriesEdited(var entries)
 
@@ -34,6 +34,11 @@ SettingsReorderList {
         saveRows(rows.filter((row, i) => i !== index));
     }
 
+    // Rows are keyed by id, so the open one follows its entry through a drag or a removal
+    function toggleExpanded(id) {
+        expandedId = expandedId === id ? "" : id;
+    }
+
     // The rows follow the list by position, so a drag or a reading change never rebuilds them mid-use
     model: rows.length
     // An unsaved device dragged above a saved one is saved to keep its new place.
@@ -48,7 +53,8 @@ SettingsReorderList {
 
         readonly property var entry: root.rows[index] ?? root.emptyRow
         readonly property bool system: entry.kind === "system"
-        readonly property bool detailed: entry.on && (system ? BatteryService.batteryAvailable : entry.present)
+        readonly property bool detailed: system ? BatteryService.batteryAvailable : true
+        readonly property bool expanded: detailed && root.expandedId === entry.id
 
         reorderList: root
         clickable: true
@@ -57,13 +63,19 @@ SettingsReorderList {
         iconName: system ? (BatteryService.batteryAvailable ? BatteryService.getBatteryIcon() : "power") : (entry.iconName || "devices_other")
         iconColor: entry.present ? Theme.primary : Theme.onSurfaceVariant
         titleColor: entry.present ? contentColor : supportingContentColor
-        Accessible.role: Accessible.CheckBox
-        Accessible.checkable: true
-        Accessible.checked: entry.on
-        Accessible.onToggleAction: row.clicked(true)
-        onClicked: root.patchRow(index, {
-            "on": !entry.on
-        })
+        Accessible.checkable: detailed
+        Accessible.checked: expanded
+        Accessible.onToggleAction: row.activate()
+        onClicked: row.activate()
+
+        function activate() {
+            if (detailed)
+                root.toggleExpanded(entry.id);
+            else
+                root.patchRow(index, {
+                    "on": !entry.on
+                });
+        }
 
         DActionButton {
             anchors.verticalCenter: parent.verticalCenter
@@ -73,12 +85,18 @@ SettingsReorderList {
             onClicked: root.removeRow(row.index)
         }
 
+        DIcon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: row.detailed
+            name: row.expanded ? "expand_less" : "expand_more"
+            size: Theme.iconSize
+            color: row.supportingContentColor
+        }
+
         DToggle {
             anchors.verticalCenter: parent.verticalCenter
             hideText: true
             text: row.title
-            activeFocusOnTab: false
-            Accessible.ignored: true
             checked: row.entry.on
             onToggled: value => root.patchRow(row.index, {
                     "on": value
@@ -87,34 +105,45 @@ SettingsReorderList {
 
         body: Loader {
             width: parent.width
-            active: row.detailed
+            // The reorder list places rows by height, so a dragged row folds its options away until it drops
+            visible: active && !row.dragging
+            active: row.expanded
             sourceComponent: row.system ? systemBody : deviceBody
 
             Component {
                 id: deviceBody
 
-                Item {
-                    implicitHeight: parts.height
+                Column {
+                    spacing: Theme.spacingXS
 
-                    DButtonGroup {
-                        id: parts
-
-                        anchors.left: parent.left
-                        size: "small"
-                        selectionMode: "multi"
-                        arrowKeysSelect: false
-                        maximumWidth: parent.width
-                        model: root.partLabels
-                        onSelectionChanged: (index, selected) => root.patchRow(row.index, {
-                                [root.partKeys[index]]: selected
+                    SettingsToggleRow {
+                        width: parent.width
+                        paintBackground: false
+                        text: I18n.tr("Show icon", "battery bar widget: show the device glyph")
+                        checked: row.entry.icon
+                        onToggled: checked => root.patchRow(row.index, {
+                                "icon": checked
                             })
                     }
 
-                    // The group assigns its own selection on a pick, which would drop a plain binding
-                    Binding {
-                        target: parts
-                        property: "currentSelection"
-                        value: root.partKeys.filter(key => row.entry[key]).map(key => root.partLabels[root.partKeys.indexOf(key)])
+                    SettingsToggleRow {
+                        width: parent.width
+                        paintBackground: false
+                        text: I18n.tr("Show percentage", "battery bar widget: show the charge number")
+                        checked: row.entry.percent
+                        onToggled: checked => root.patchRow(row.index, {
+                                "percent": checked
+                            })
+                    }
+
+                    SettingsToggleRow {
+                        width: parent.width
+                        paintBackground: false
+                        text: root.lowOnlyLabel
+                        checked: row.entry.lowOnly
+                        onToggled: checked => root.patchRow(row.index, {
+                                "lowOnly": checked
+                            })
                     }
                 }
             }
@@ -128,7 +157,7 @@ SettingsReorderList {
                     SettingsToggleRow {
                         width: parent.width
                         paintBackground: false
-                        text: root.partLabels[2]
+                        text: root.lowOnlyLabel
                         checked: row.entry.lowOnly
                         onToggled: checked => root.patchRow(row.index, {
                                 "lowOnly": checked

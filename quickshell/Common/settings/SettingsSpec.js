@@ -45,7 +45,7 @@ var BATTERY_BAR_COLORS = ["theme", "lowcharging", "level"];
 var BATTERY_POPOUT_COLORS = ["primary"].concat(BATTERY_BAR_COLORS);
 var BATTERY_POPOUT_STYLES = ["compact", "line", "ring", "card"];
 var BATTERY_POPOUT_BADGES = ["shape", "ring"];
-var BATTERY_POPOUT_POWER_PLACEMENTS = ["card", "overview"];
+var BATTERY_POPOUT_DENSITIES = ["shell", "spacious", "comfortable", "compact", "dense"];
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
 
 var LOCAL_SPEC = {
@@ -1253,6 +1253,10 @@ var LOCAL_SPEC = {
         def: "compact",
         coerce: oneOf(BATTERY_POPOUT_STYLES)
     },
+    batteryPopoutDensity: {
+        def: "shell",
+        coerce: oneOf(BATTERY_POPOUT_DENSITIES)
+    },
     batteryPopoutBadge: {
         def: "shape",
         coerce: oneOf(BATTERY_POPOUT_BADGES)
@@ -1273,10 +1277,6 @@ var LOCAL_SPEC = {
     },
     batteryPopoutPower: {
         def: true
-    },
-    batteryPopoutPowerPlacement: {
-        def: "card",
-        coerce: oneOf(BATTERY_POPOUT_POWER_PLACEMENTS)
     },
     batteryPopoutPowerStyle: {
         def: "buttons",
