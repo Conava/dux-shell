@@ -341,8 +341,8 @@ Item {
 
                 SectionLabel {
                     visible: (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
-                    topPadding: root.hasHero ? Theme.spacingXL - Theme.groupedListGap : 0
-                    bottomPadding: Theme.spacingS - Theme.groupedListGap
+                    topPadding: root.hasHero ? BatteryPopoutMetrics.labelTop - Theme.groupedListGap : 0
+                    bottomPadding: BatteryPopoutMetrics.labelGap - Theme.groupedListGap
                     text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
                 }
 
@@ -473,11 +473,11 @@ Item {
             Column {
                 width: parent.width
                 visible: root.showDevices
-                spacing: Theme.spacingS
+                spacing: BatteryPopoutMetrics.labelGap
 
                 SectionLabel {
                     visible: root.compactStyle
-                    topPadding: Theme.spacingXL - BatteryPopoutMetrics.sectionGap
+                    topPadding: BatteryPopoutMetrics.labelTop - BatteryPopoutMetrics.sectionGap
                     text: I18n.tr("Devices")
                 }
 

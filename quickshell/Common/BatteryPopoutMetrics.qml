@@ -19,6 +19,8 @@ Singleton {
     readonly property real pad: Theme.spacingL + stepS
     readonly property real gap: dense ? Theme.spacingXS : Theme.spacingS + Theme.spacingXXS + stepXS
     readonly property real sectionGap: Math.max(Theme.spacingS, Theme.spacingM + stepS)
+    readonly property real labelTop: Theme.spacingXL + stepM
+    readonly property real labelGap: Theme.spacingS + stepXS
     readonly property real warningPaddingH: Theme.spacingL + Theme.spacingXS + stepS
     readonly property real warningPaddingV: Theme.spacingL + stepS
     readonly property real warningMinHeight: Theme.listItemTwoLineHeight + stepM
