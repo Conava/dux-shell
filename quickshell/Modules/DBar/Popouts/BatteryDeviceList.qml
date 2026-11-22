@@ -198,29 +198,36 @@ Item {
     Component {
         id: chipsComp
 
-        BatteryChipFlow {
-            id: chipFlow
-            model: ScriptModel {
-                values: root.items
-                objectProp: "key"
-            }
+        DCard {
+            height: chipFlow.implicitHeight + pad * 2
+            pad: BatteryPopoutMetrics.pad
+            restRadius: Theme.groupedListOuterRadius
 
-            delegate: BatteryChip {
-                id: chip
+            BatteryChipFlow {
+                id: chipFlow
+                width: parent.width
+                model: ScriptModel {
+                    values: root.items
+                    objectProp: "key"
+                }
 
-                maximumWidth: chipFlow.chipMaxWidth
+                delegate: BatteryChip {
+                    id: chip
 
-                required property var modelData
+                    maximumWidth: chipFlow.chipMaxWidth
 
-                value: root.percentText(chip.modelData)
-                valueColor: root.valueColor(chip.modelData)
-                Accessible.name: root.accessibleName(chip.modelData)
+                    required property var modelData
 
-                leading: DeviceGlyph {
-                    device: chip.modelData
-                    accent: root.accent(chip.modelData)
-                    cutColor: chip.color
-                    size: BatteryPopoutMetrics.compactGlyph
+                    value: root.percentText(chip.modelData)
+                    valueColor: root.valueColor(chip.modelData)
+                    Accessible.name: root.accessibleName(chip.modelData)
+
+                    leading: DeviceGlyph {
+                        device: chip.modelData
+                        accent: root.accent(chip.modelData)
+                        cutColor: chip.color
+                        size: BatteryPopoutMetrics.compactGlyph
+                    }
                 }
             }
         }

@@ -47,6 +47,7 @@ var BATTERY_POPOUT_COLORS = ["primary"].concat(BATTERY_BAR_COLORS);
 var BATTERY_POPOUT_STYLES = ["compact", "line", "ring", "card"];
 var BATTERY_POPOUT_BADGES = ["shape", "ring"];
 var BATTERY_POPOUT_DENSITIES = ["shell"].concat(DensityPresets.LEVELS);
+var BATTERY_POPOUT_CARDS = ["separate", "combined"];
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
 
 var LOCAL_SPEC = {
@@ -1290,6 +1291,10 @@ var LOCAL_SPEC = {
     batteryPopoutDensity: {
         def: "shell",
         coerce: oneOf(BATTERY_POPOUT_DENSITIES)
+    },
+    batteryPopoutCards: {
+        def: "separate",
+        coerce: oneOf(BATTERY_POPOUT_CARDS)
     },
     batteryPopoutBadge: {
         def: "shape",

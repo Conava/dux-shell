@@ -6,6 +6,7 @@ import Quickshell
 Singleton {
     readonly property int level: SettingsData.batteryPopoutDensity === "shell" ? Theme.densityLevel : Theme.densityLevelFor(SettingsData.batteryPopoutDensity)
     readonly property string style: SettingsData.batteryPopoutStyle === "line" && level < 0 ? "compact" : SettingsData.batteryPopoutStyle
+    readonly property bool combined: SettingsData.batteryPopoutCards === "combined"
     readonly property int tileColumns: 2
     readonly property int deviceTileColumns: 3
     readonly property real stepXS: level * Theme.spacingXXS

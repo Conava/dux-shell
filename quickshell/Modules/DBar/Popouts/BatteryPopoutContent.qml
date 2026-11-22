@@ -94,6 +94,9 @@ Item {
     readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
     readonly property bool hasStats: root.statsModel.length > 0
     readonly property bool showGroup: root.showPower || root.hasStats
+    readonly property bool combined: BatteryPopoutMetrics.combined
+    readonly property bool chipsInPower: !root.combined && root.showPower && root.hasStats && SettingsData.batteryPopoutDetailsLayout === "chips"
+    readonly property bool standaloneStats: root.hasStats && !root.chipsInPower
     readonly property var heroSource: {
         if (root.showBattery) {
             const unknown = !BatteryService.hasBatteryReading;
@@ -321,54 +324,73 @@ Item {
                 }
             }
 
-            Column {
+            DCard {
+                id: stack
+
+                readonly property bool shared: root.combined
+
                 width: parent.width
-                spacing: Theme.groupedListGap
-
-                BatteryHero {
-                    width: parent.width
-                    visible: root.hasHero
-                    source: root.heroSource
-                    facts: root.heroFacts
-                    factsBeside: root.factsBeside
-                    active: root.active
-                    showEdit: root.showEdit
-                    topRadius: Theme.groupedListOuterRadius
-                    bottomRadius: root.showGroup ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
-                    onSettingsRequested: root.openSettings()
-                    onEditRequested: root.openWidgetSettings()
-                }
-
-                SectionLabel {
-                    visible: (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
-                    topPadding: root.hasHero ? BatteryPopoutMetrics.labelTop - Theme.groupedListGap : 0
-                    bottomPadding: BatteryPopoutMetrics.labelGap - Theme.groupedListGap
-                    text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
-                }
+                height: stackColumn.implicitHeight + pad * 2
+                visible: root.hasHero || root.showGroup
+                pad: shared ? BatteryPopoutMetrics.pad : 0
+                color: shared ? surfaceColor : "transparent"
+                border.width: shared ? Theme.layerOutlineWidth : 0
+                restRadius: Theme.cornerRadiusL
 
                 Column {
-                    id: group
+                    id: stackColumn
                     width: parent.width
-                    spacing: Theme.groupedListGap
-                    visible: root.showGroup
+                    spacing: stack.shared ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
 
-                    BatteryPowerProfile {
-                        visible: root.showPower
-                        showHeading: SettingsData.batteryPopoutPowerStyle === "slider"
+                    BatteryHero {
+                        width: parent.width
+                        visible: root.hasHero
+                        framed: !stack.shared
+                        source: root.heroSource
+                        facts: root.heroFacts
+                        factsBeside: root.factsBeside
                         active: root.active
-                        topLeftRadius: root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
-                        topRightRadius: topLeftRadius
-                        bottomLeftRadius: root.hasStats ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
-                        bottomRightRadius: bottomLeftRadius
+                        showEdit: root.showEdit
+                        topRadius: Theme.groupedListOuterRadius
+                        bottomRadius: root.showGroup ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                        onSettingsRequested: root.openSettings()
+                        onEditRequested: root.openWidgetSettings()
                     }
 
-                    BatteryStats {
+                    SectionLabel {
+                        visible: !stack.shared && (!root.hasHero || root.compactStyle) && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
+                        topPadding: root.hasHero ? BatteryPopoutMetrics.labelTop - Theme.groupedListGap : 0
+                        bottomPadding: BatteryPopoutMetrics.labelGap - Theme.groupedListGap
+                        text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
+                    }
+
+                    Column {
+                        id: group
                         width: parent.width
-                        model: root.statsModel
-                        active: root.active
-                        spread: !root.compactStyle
-                        topRadius: root.showPower || root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
-                        bottomRadius: Theme.groupedListOuterRadius
+                        spacing: stack.shared ? BatteryPopoutMetrics.sectionGap : Theme.groupedListGap
+                        visible: root.showGroup
+
+                        BatteryPowerProfile {
+                            visible: root.showPower
+                            framed: !stack.shared
+                            showHeading: SettingsData.batteryPopoutPowerStyle === "slider"
+                            active: root.active
+                            footer: root.chipsInPower ? chipsFooter : null
+                            topLeftRadius: root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                            topRightRadius: topLeftRadius
+                            bottomLeftRadius: root.standaloneStats ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                            bottomRightRadius: bottomLeftRadius
+                        }
+
+                        BatteryStats {
+                            width: parent.width
+                            model: root.chipsInPower ? [] : root.statsModel
+                            active: root.active
+                            framed: !stack.shared
+                            spread: !root.compactStyle
+                            topRadius: root.showPower || root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius
+                            bottomRadius: Theme.groupedListOuterRadius
+                        }
                     }
                 }
             }
@@ -522,6 +544,16 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    Component {
+        id: chipsFooter
+
+        BatteryStats {
+            model: root.statsModel
+            active: root.active
+            framed: false
         }
     }
 

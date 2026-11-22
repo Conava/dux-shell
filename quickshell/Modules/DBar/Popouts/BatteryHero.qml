@@ -19,6 +19,8 @@ Item {
     property bool factsBeside: false
     property bool showEdit: true
     property bool active: false
+    // Unframed, the hero sits inside a card that is drawn around it
+    property bool framed: true
     property real topRadius: Theme.cornerRadiusL
     property real bottomRadius: Theme.cornerRadiusL
 
@@ -71,7 +73,9 @@ Item {
     }
 
     component HeroCard: DCard {
-        pad: BatteryPopoutMetrics.pad
+        pad: root.framed ? BatteryPopoutMetrics.pad : 0
+        color: root.framed ? surfaceColor : "transparent"
+        border.width: root.framed ? Theme.layerOutlineWidth : 0
         restRadius: Theme.cornerRadiusL
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius

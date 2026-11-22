@@ -12,6 +12,10 @@ DCard {
 
     property bool active: false
     property bool showHeading: true
+    // Unframed, it sits inside a card that is drawn around it
+    property bool framed: true
+    // Extra content as the last row of the card
+    property Component footer: null
 
     readonly property string style: SettingsData.batteryPopoutPowerStyle
     readonly property bool slider: style === "slider"
@@ -63,10 +67,10 @@ DCard {
 
     width: parent?.width ?? 0
     height: body.implicitHeight + pad * 2
-    pad: BatteryPopoutMetrics.pad
+    pad: framed ? BatteryPopoutMetrics.pad : 0
     restRadius: Theme.cornerRadiusL
-    color: surfaceColor
-    border.width: Theme.layerOutlineWidth
+    color: framed ? surfaceColor : "transparent"
+    border.width: framed ? Theme.layerOutlineWidth : 0
     visible: PowerProfileWatcher.available
     enabled: PowerProfileWatcher.available
     Component.onCompleted: Qt.callLater(() => settled = true)
@@ -111,6 +115,12 @@ DCard {
         Loader {
             width: parent.width
             sourceComponent: root.style === "circle" ? circleComp : (root.slider ? sliderComp : groupComp)
+        }
+
+        Loader {
+            width: parent.width
+            visible: root.footer !== null
+            sourceComponent: root.footer
         }
     }
 

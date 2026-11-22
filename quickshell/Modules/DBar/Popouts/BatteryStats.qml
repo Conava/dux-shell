@@ -13,6 +13,8 @@ Item {
     property real topRadius: Theme.groupedListOuterRadius
     property real bottomRadius: Theme.groupedListOuterRadius
     property bool spread: false
+    // Unframed, the stats sit inside a card that is drawn around them
+    property bool framed: true
 
     readonly property string layout: SettingsData.batteryPopoutDetailsLayout
     readonly property int count: model.length
@@ -34,7 +36,7 @@ Item {
     Component {
         id: summaryComp
 
-        DCard {
+        FrameCard {
             id: summary
 
             readonly property real innerWidth: width - pad * 2
@@ -44,12 +46,6 @@ Item {
             readonly property bool cells: root.spread || wrapped
 
             height: summaryGrid.implicitHeight + pad * 2
-            pad: BatteryPopoutMetrics.pad
-            restRadius: Theme.groupedListInnerRadius
-            topLeftRadius: root.topRadius
-            topRightRadius: root.topRadius
-            bottomLeftRadius: root.bottomRadius
-            bottomRightRadius: root.bottomRadius
 
             Row {
                 id: measureRow
@@ -120,8 +116,9 @@ Item {
                     required index
 
                     count: root.count
-                    topRadius: root.topRadius
-                    bottomRadius: root.bottomRadius
+                    topRadius: root.framed ? root.topRadius : Theme.cornerRadiusM
+                    bottomRadius: root.framed ? root.bottomRadius : Theme.cornerRadiusM
+                    color: root.framed ? surfaceColor : Theme.chipSurface
                     label: tile.modelData.label
                     value: tile.modelData.value
                     valueColor: root.tone(tile.modelData.bad, Theme.surfaceText)
@@ -139,25 +136,30 @@ Item {
     Component {
         id: chipsComp
 
-        BatteryChipFlow {
-            id: chipFlow
-            model: root.model
+        FrameCard {
+            height: chipFlow.implicitHeight + pad * 2
 
-            delegate: BatteryChip {
-                id: chip
+            BatteryChipFlow {
+                id: chipFlow
+                width: parent.width
+                model: root.model
 
-                maximumWidth: chipFlow.chipMaxWidth
+                delegate: BatteryChip {
+                    id: chip
 
-                required property var modelData
+                    maximumWidth: chipFlow.chipMaxWidth
 
-                value: chip.modelData.value
-                valueColor: root.tone(chip.modelData.bad, Theme.surfaceText)
-                Accessible.name: chip.modelData.label + ": " + chip.modelData.value
+                    required property var modelData
 
-                leading: DIcon {
-                    name: chip.modelData.icon
-                    size: BatteryPopoutMetrics.compactGlyph
-                    color: root.tone(chip.modelData.bad, Theme.primary)
+                    value: chip.modelData.value
+                    valueColor: root.tone(chip.modelData.bad, Theme.surfaceText)
+                    Accessible.name: chip.modelData.label + ": " + chip.modelData.value
+
+                    leading: DIcon {
+                        name: chip.modelData.icon
+                        size: BatteryPopoutMetrics.compactGlyph
+                        color: root.tone(chip.modelData.bad, Theme.primary)
+                    }
                 }
             }
         }
@@ -187,6 +189,17 @@ Item {
                 }
             }
         }
+    }
+
+    component FrameCard: DCard {
+        pad: root.framed ? BatteryPopoutMetrics.pad : 0
+        color: root.framed ? surfaceColor : "transparent"
+        border.width: root.framed ? Theme.layerOutlineWidth : 0
+        restRadius: Theme.groupedListInnerRadius
+        topLeftRadius: root.topRadius
+        topRightRadius: root.topRadius
+        bottomLeftRadius: root.bottomRadius
+        bottomRightRadius: root.bottomRadius
     }
 
     function tone(bad, normal) {
@@ -284,6 +297,8 @@ Item {
         property var radii
 
         pad: 0
+        color: root.framed ? surfaceColor : "transparent"
+        border.width: root.framed ? Theme.layerOutlineWidth : 0
         height: Math.max(BatteryPopoutMetrics.row, rowContent.implicitHeight + Theme.spacingXS * 2)
         restRadius: Theme.groupedListInnerRadius
         topLeftRadius: radii?.topLeft ?? restRadius
