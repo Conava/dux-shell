@@ -114,7 +114,7 @@ Item {
     readonly property real capBreadth: Math.max(1, Math.round(root.capBreadthUnits * root.unit))
     readonly property real capSpan: Math.round(6 * root.unit)
 
-    implicitWidth: root.circular ? root.ringDiameter : root.vertical ? Math.round(14 * root.unit) : root.capOffset + (root.boltVisible ? root.boltBadgeWidth : root.capBreadth) + root.lead
+    implicitWidth: root.circular ? root.ringDiameter : root.vertical ? Math.round(14 * root.unit) : root.capOffset + (root.boltVisible ? root.boltBadgeWidth : root.capBreadth)
     implicitHeight: root.circular ? root.ringDiameter : root.vertical ? root.capOffset + root.capBreadth : Math.round(14 * root.unit)
 
     StyledTextMetrics {

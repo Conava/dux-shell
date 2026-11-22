@@ -20,11 +20,19 @@ test("old styles fold into solid and circle and keep the meter orientation of th
     const styles = ["solid", "outline", "ring", "duo", "icon", "circle", "future"].map(batteryStyle => ({ id: "battery", batteryStyle }));
     const horizontal = migrate({ barConfigs: [bar(1, styles)] }).barConfigs[0].rightWidgets;
     assert.deepEqual(horizontal.map(w => w.batteryStyle), ["solid", "solid", "circle", "circle", "icon", "circle", "future"]);
-    assert.deepEqual(horizontal.map(w => w.batteryDirection), ["horizontal", "horizontal", "horizontal", "horizontal", undefined, undefined, undefined]);
+    assert.deepEqual(horizontal.map(w => w.batteryDirection), ["horizontal", "horizontal", "horizontal", "horizontal", "vertical", undefined, undefined]);
     for (const position of [2, 3]) {
         const vertical = migrate({ barConfigs: [bar(position, styles)] }).barConfigs[0].rightWidgets;
         assert.deepEqual(vertical.map(w => w.batteryDirection).slice(0, 4), ["vertical", "vertical", "vertical", "vertical"]);
     }
+});
+
+test("entries that relied on the old defaults keep their upright look", () => {
+    const widgets = () => [{ id: "battery", batteryStyle: "icon", batteryDirection: "horizontal" }, { id: "battery" }, "battery"];
+    const horizontal = migrate({ barConfigs: [bar(0, widgets())] }).barConfigs[0].rightWidgets;
+    assert.deepEqual(horizontal, [{ id: "battery", batteryStyle: "icon", batteryDirection: "horizontal" }, { id: "battery" }, "battery"]);
+    const vertical = migrate({ barConfigs: [bar(2, widgets())] }).barConfigs[0].rightWidgets;
+    assert.deepEqual(vertical, [{ id: "battery", batteryStyle: "icon", batteryDirection: "horizontal" }, { id: "battery", batteryDirection: "vertical" }, { id: "battery", enabled: true, batteryDirection: "vertical" }]);
 });
 
 test("an explicit direction is kept and other widgets are not touched", () => {

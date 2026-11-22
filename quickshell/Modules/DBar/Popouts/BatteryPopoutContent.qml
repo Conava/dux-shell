@@ -56,6 +56,7 @@ Item {
                 key: "power",
                 label: I18n.tr("Power", "battery stat label, charge or discharge rate in watts", true),
                 value: root.powerRate(true),
+                reserve: "+88.8 W",
                 icon: "electrical_services",
                 ratio: -1,
                 bad: false

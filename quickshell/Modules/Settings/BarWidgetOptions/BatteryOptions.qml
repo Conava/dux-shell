@@ -305,6 +305,7 @@ Column {
             settingKey: "batteryPopoutStats"
             tags: ["battery", "popout", "statistics", "stats", "show", "hide"]
             text: I18n.tr("Show", "battery settings: show this popout section")
+            enabled: SettingsData.batteryPopoutBattery
             checked: SettingsData.batteryPopoutStats
             onToggled: checked => SettingsData.set("batteryPopoutStats", checked)
         }

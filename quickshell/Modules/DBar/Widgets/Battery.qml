@@ -285,7 +285,7 @@ BasePill {
                                     meterStyle: battery.batteryStyle === "circle" ? "arc" : "solid"
                                     vertical: battery.batteryDirection === "vertical"
                                     singleTextColor: true
-                                    balanceEnds: battery.batteryDirection === "horizontal" && !battery.isVerticalOrientation
+                                    balanceEnds: battery.batteryDirection === "horizontal" && !battery.isVerticalOrientation && slot.shownText === "" && (battery.renderEntries.length === 1 || battery.splitActive)
                                     showNumber: battery.percentVisible && battery.percentInMeter
                                     colorMode: battery.colorMode
                                     neutralColor: Theme.widgetIconColor

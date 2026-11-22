@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import qs.Common
+import qs.DCommon.Common
 import qs.DCommon.Widgets
 
 Item {
@@ -60,6 +61,7 @@ Item {
 
                         label: modelData.label
                         value: modelData.value
+                        reserve: modelData.reserve ?? ""
                         iconName: modelData.icon
                         ratio: modelData.ratio ?? -1
                     }
@@ -230,11 +232,15 @@ Item {
         id: entry
         property string label: ""
         property string value: ""
+        // Widest value this stat can show, so a wrap decision does not flip when the value changes
+        property string reserve: ""
         property string iconName: ""
         property real ratio: -1
         property bool bad: false
 
-        implicitWidth: entryGlyph.width + entryRow.spacing + Math.max(labelText.implicitWidth, valueText.implicitWidth)
+        readonly property real reserveWidth: reserve === "" ? 0 : Fonts.textWidth(valueText.font, reserve.replace(/\d/g, Fonts.widestDigit(valueText.font)))
+
+        implicitWidth: entryGlyph.width + entryRow.spacing + Math.max(labelText.implicitWidth, valueText.implicitWidth, entry.reserveWidth)
         implicitHeight: entryRow.implicitHeight
         Accessible.role: Accessible.StaticText
         Accessible.name: label + ": " + value

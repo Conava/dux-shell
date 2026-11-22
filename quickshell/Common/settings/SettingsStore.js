@@ -93,11 +93,11 @@ function isVerticalPosition(position) {
 
 function migrateBatteryInstance(entry, vertical) {
     var style = entry.batteryStyle;
-    if (typeof style !== "string" || !Object.prototype.hasOwnProperty.call(BATTERY_STYLE_FOLDS, style))
-        return;
-    if (entry.batteryDirection === undefined)
-        entry.batteryDirection = vertical ? "vertical" : "horizontal";
-    entry.batteryStyle = BATTERY_STYLE_FOLDS[style];
+    var folds = typeof style === "string" && Object.prototype.hasOwnProperty.call(BATTERY_STYLE_FOLDS, style);
+    if (entry.batteryDirection === undefined && (folds || style === "icon" || (style === undefined && vertical)))
+        entry.batteryDirection = folds && !vertical ? "horizontal" : "vertical";
+    if (folds)
+        entry.batteryStyle = BATTERY_STYLE_FOLDS[style];
 }
 
 function migrateBatteryWidgetList(widgets, idKeys, vertical) {
@@ -105,6 +105,9 @@ function migrateBatteryWidgetList(widgets, idKeys, vertical) {
         return;
     for (var w = 0; w < widgets.length; w++) {
         var entry = widgets[w];
+        if (entry === "battery" && vertical) {
+            entry = widgets[w] = { id: "battery", enabled: true };
+        }
         if (!entry || typeof entry !== "object")
             continue;
         var id = entry[idKeys[0]] ?? entry[idKeys[1]];
