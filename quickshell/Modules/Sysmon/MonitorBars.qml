@@ -38,7 +38,7 @@ Item {
     readonly property real columnGap: zoomed.spacingXS * Theme.fontScale
     readonly property real looseGap: zoomed.spacingS * Theme.fontScale
     property real availableHeight: Infinity
-    // A single value's group is two lines tall, so its bracket keeps its shape, unless the stack then needs columns.
+    // A single value's group is two lines tall, unless the stack then needs columns.
     readonly property bool tight: !vertical && stackHeight(2, zoomed.spacingS, tilePad, looseGap) > availableHeight
     readonly property int minLines: tight ? 1 : 2
     readonly property real lineGap: tight ? zoomed.spacingXS : zoomed.spacingS
@@ -357,7 +357,7 @@ Item {
             }
 
             Bracket {
-                visible: !root.tiled
+                visible: !root.tiled && group.entries.length > 1
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: columns.implicitWidth - root.zoomed.spacingXXS * 2
                 Layout.preferredHeight: root.zoomed.bracketDepth
@@ -405,7 +405,7 @@ Item {
                 spacing: root.zoomed.spacingS
 
                 Bracket {
-                    visible: !root.tiled
+                    visible: !root.tiled && group.entries.length > 1
                     Layout.fillHeight: true
                     Layout.preferredWidth: root.zoomed.bracketDepth
                 }
