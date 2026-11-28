@@ -396,6 +396,8 @@ Credential prompts are sent when authentication is required:
 - `hints`: Additional context about the network type
 - `reason`: Human-readable explanation (e.g., "Previous password was incorrect")
 
+A prompt that ends without a submit or cancel from the client (timeout, NetworkManager cancelled the request, the VPN login was cancelled or replaced) is announced on the same subscription as a `network.credentials.closed` event with `{"token": "..."}` (API v46+). Close the prompt with that token; submitting it would fail with an unknown token. A token that is no longer shown can be ignored.
+
 ## Connection Flow
 
 ### Typical Timeline

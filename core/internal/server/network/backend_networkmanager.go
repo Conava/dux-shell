@@ -135,6 +135,13 @@ type NetworkManagerBackend struct {
 	// Guarded by stateMutex.
 	vpnUnaskedFields []string
 
+	// The one browser VPN login (Fortinet or GlobalProtect SAML) allowed at a time.
+	browserLogin *browserLogin
+	// lastBrowserLogin stays set after the login ends: the next one waits
+	// on its done, which closes once its port is free.
+	lastBrowserLogin *browserLogin
+	browserLoginMu   sync.Mutex
+
 	onStateChange func()
 }
 

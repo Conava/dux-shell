@@ -23,6 +23,7 @@ CcListRow {
 
     readonly property bool isActive: DMSNetworkService.vpnStateForUuid(profile?.uuid) === "activated"
     readonly property bool isConnecting: DMSNetworkService.isVpnConnectingUuid(profile?.uuid)
+    readonly property bool canCancel: DMSNetworkService.canCancelVpnConnect(profile?.uuid)
     readonly property bool hasError: !isConnecting && DMSNetworkService.vpnError !== "" && DMSNetworkService.vpnErrorUuid === (profile?.uuid ?? "")
     readonly property var configData: (!isTransient && isExpanded) ? VPNService.editConfig : null
     readonly property var configFields: buildConfigFields()
@@ -80,12 +81,8 @@ CcListRow {
     clickable: true
     onClicked: DMSNetworkService.toggle(profile.uuid)
 
-    leading: DSpinner {
-        size: Theme.iconSizeMedium
-        strokeWidth: CcMetrics.spinnerStroke
-        color: Theme.warning
+    leading: CcConnectingSpinner {
         visible: root.isConnecting
-        running: visible
     }
 
     DActionButton {
@@ -94,10 +91,10 @@ CcListRow {
         buttonSize: Theme.buttonHeightXS
         iconSize: Theme.iconSizeMedium
         iconName: "link_off"
-        Accessible.name: I18n.tr("Disconnect")
-        tooltipText: I18n.tr("Disconnect")
+        Accessible.name: root.canCancel ? I18n.tr("Cancel", "cancel a pending VPN connection") : I18n.tr("Disconnect")
+        tooltipText: root.canCancel ? I18n.tr("Cancel", "cancel a pending VPN connection") : I18n.tr("Disconnect")
         iconColor: root.contentColor
-        enabled: !DMSNetworkService.isBusy
+        enabled: DMSNetworkService.canToggleVpn(root.profile?.uuid)
         onClicked: DMSNetworkService.toggle(root.profile.uuid)
     }
 

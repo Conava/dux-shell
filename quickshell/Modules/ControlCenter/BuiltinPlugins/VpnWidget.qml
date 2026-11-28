@@ -8,7 +8,7 @@ import qs.Modules.Plugins
 PluginComponent {
     id: root
 
-    readonly property bool vpnActivating: DMSNetworkService.vpnIsBusy || DMSNetworkService.activeState === "activating"
+    readonly property bool vpnActivating: DMSNetworkService.vpnIsBusy || DMSNetworkService.vpnConnecting
     readonly property bool vpnActivated: DMSNetworkService.connected && DMSNetworkService.activeState === "activated"
 
     ccWidgetIcon: "vpn_key"
@@ -37,7 +37,7 @@ PluginComponent {
                         icon: "vpn_key",
                         toggle: true,
                         active: DMSNetworkService.vpnStateForUuid(profile.uuid) === "activated",
-                        enabled: !DMSNetworkService.isVpnConnectingUuid(profile.uuid),
+                        enabled: !DMSNetworkService.isVpnConnectingUuid(profile.uuid) || DMSNetworkService.canCancelVpnConnect(profile.uuid),
                         trigger: () => DMSNetworkService.toggle(profile.uuid)
                     }))
         }

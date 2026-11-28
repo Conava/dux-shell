@@ -627,6 +627,11 @@ func handleConnectVPN(conn *ipc.ConnWriter, req ipc.Request, manager *Manager) {
 	singleActive := params.BoolOpt(req.Params, "singleActive", true)
 
 	if err := manager.ConnectVPN(uuidOrName, singleActive); err != nil {
+		if vpnConnectCancelled(err) {
+			log.Infof("handleConnectVPN: %v", err)
+			conn.Respond(req.ID, models.SuccessResult{Success: false, Message: "VPN login cancelled"})
+			return
+		}
 		log.Warnf("handleConnectVPN: failed to connect: %v", err)
 		conn.RespondError(req.ID, fmt.Sprintf("failed to connect VPN: %v", err))
 		return

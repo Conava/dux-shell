@@ -400,7 +400,9 @@ function hyprlandSpecialWorkspaces(raw, screenName, followFocus, occupiedOnly) {
 }
 
 function hyprlandWorkspacesForScreen(raw, screenName, followFocus, occupiedOnly, minCount, showSpecial) {
-    const regular = hyprlandPersistentWorkspaces(raw, hyprlandListedWorkspaces(raw, screenName, followFocus, occupiedOnly), screenName, followFocus, minCount);
+    const listed = hyprlandListedWorkspaces(raw, screenName, followFocus, occupiedOnly);
+    const highest = occupiedOnly ? 0 : Math.max(0, ...listed.map(ws => ws.id));
+    const regular = hyprlandPersistentWorkspaces(raw, listed, screenName, followFocus, Math.max(minCount ?? 0, highest));
     if (!showSpecial)
         return regular;
     return regular.concat(hyprlandSpecialWorkspaces(raw, screenName, followFocus, occupiedOnly));

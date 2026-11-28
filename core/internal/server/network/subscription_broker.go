@@ -14,11 +14,13 @@ type SubscriptionBroker struct {
 	requests           syncmap.Map[string, PromptRequest]
 	pathSettingToToken syncmap.Map[string, string]
 	broadcastPrompt    func(CredentialPrompt)
+	broadcastClosed    func(CredentialClosed)
 }
 
-func NewSubscriptionBroker(broadcastPrompt func(CredentialPrompt)) PromptBroker {
+func NewSubscriptionBroker(broadcastPrompt func(CredentialPrompt), broadcastClosed func(CredentialClosed)) PromptBroker {
 	return &SubscriptionBroker{
 		broadcastPrompt: broadcastPrompt,
+		broadcastClosed: broadcastClosed,
 	}
 }
 
@@ -70,9 +72,13 @@ func (b *SubscriptionBroker) Wait(ctx context.Context, token string) (PromptRepl
 	select {
 	case <-ctx.Done():
 		b.cleanup(token)
+		b.announceClosed(token)
 		return PromptReply{}, errdefs.ErrSecretPromptTimeout
 	case reply := <-replyChan:
 		b.cleanup(token)
+		if reply.closedByBackend {
+			b.announceClosed(token)
+		}
 		if reply.Cancel {
 			return reply, errdefs.ErrSecretPromptCancelled
 		}
@@ -93,6 +99,12 @@ func (b *SubscriptionBroker) Resolve(token string, reply PromptReply) error {
 	default:
 		log.Warnf("[SubscriptionBroker] Resolve: failed to deliver reply for token %s (channel full or closed)", token)
 		return fmt.Errorf("failed to deliver reply for token: %s", token)
+	}
+}
+
+func (b *SubscriptionBroker) announceClosed(token string) {
+	if b.broadcastClosed != nil {
+		b.broadcastClosed(CredentialClosed{Token: token})
 	}
 }
 
@@ -118,7 +130,8 @@ func (b *SubscriptionBroker) Cancel(path string, setting string) error {
 	log.Infof("[SubscriptionBroker] Cancelling prompt for %s (token=%s)", pathSettingKey, token)
 
 	reply := PromptReply{
-		Cancel: true,
+		Cancel:          true,
+		closedByBackend: true,
 	}
 
 	return b.Resolve(token, reply)

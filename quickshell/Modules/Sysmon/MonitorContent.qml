@@ -31,6 +31,7 @@ Item {
     readonly property bool listCards: layout === "list" && tiled
     readonly property bool listCardsStacked: width > height
     readonly property real listGap: listCards ? gap : Theme.groupedListGap
+    readonly property real listGapZoomed: listCards ? zoomed.spacingS : zoomed.groupedListGap
     readonly property real listLabelWidth: {
         if (!listCards)
             return 0;
@@ -55,9 +56,7 @@ Item {
     readonly property bool solo: count === 1
     readonly property real tileW: solo ? MonitorMetrics.tileSoloMinWidth : MonitorMetrics.tileMinWidth
     readonly property real tileH: solo ? MonitorMetrics.tileSoloMinHeight : MonitorMetrics.tileMinHeight
-    // Rows built by an asynchronous Loader arrive after count changes; each one bumps this so the sizes re-read.
-    property int builtRows: 0
-    readonly property real listRowHeight: listMax("naturalHeight", MonitorMetrics.listRowMinHeight)
+    readonly property real listRowHeight: listMax("naturalHeight", zoomed.listRowMinHeight)
     readonly property real listColumnWidth: listMax("implicitWidth", 0)
     readonly property int lineCount: {
         let n = 0;
@@ -93,7 +92,7 @@ Item {
                 for (let c = 1; c <= count; c++) {
                     const r = Math.ceil(count / c);
                     for (const beside of placements)
-                        candidates.push(Planner.measure(box, frame, c * listColumnWidth + (c - 1) * gap, r * listRowHeight + (r - 1) * listGap, beside, {
+                        candidates.push(Planner.measure(box, frame, c * listColumnWidth / zoom + (c - 1) * gap, r * listRowHeight / zoom + (r - 1) * listGap, beside, {
                             "cols": c
                         }));
                 }
@@ -105,7 +104,7 @@ Item {
                 const pad = Theme.spacingM * 2;
                 const legend = config.legend ?? "list";
                 const listH = lineCount * MonitorMetrics.processRowHeight + (lineCount - 1) * Theme.groupedListGap;
-                const legendH = w => legend === "list" ? listH : legend === "inline" ? graphs.inlineLegendHeight(w) : 0;
+                const legendH = w => legend === "list" ? listH : legend === "inline" ? graphs.inlineLegendHeight(w * zoom) / zoom : 0;
                 const legendSides = legend === "off" ? [false] : width > height ? [true, false] : [false, true];
                 for (const legendBeside of legendSides) {
                     for (const beside of placements) {
@@ -114,7 +113,7 @@ Item {
                                 "legendBeside": true
                             }));
                         } else {
-                            const legendW = (beside ? width - processesWidth - gap : width) - pad;
+                            const legendW = width / zoom - (beside ? processesWidth + gap : 0) - pad;
                             const h = legend === "off" ? 0 : legendH(legendW) + Theme.spacingS;
                             candidates.push(Planner.measure(box, frame, processesWidth, pad + MonitorMetrics.chartMinHeight + h, beside, {
                                 "legendBeside": false
@@ -131,7 +130,7 @@ Item {
             const w = barsVertical ? bars.implicitWidth : c * bars.groupWidth + (c - 1) * bars.minGap;
             const h = barsVertical ? bars.implicitHeight : c === 1 ? bars.stackLength : r * bars.groupHeight + (r - 1) * bars.minGap;
             for (const beside of placements)
-                candidates.push(Planner.measure(box, frame, w, h, beside, {
+                candidates.push(Planner.measure(box, frame, w / zoom, h / zoom, beside, {
                         "cols": c
                     }));
         }
@@ -142,12 +141,73 @@ Item {
     readonly property int gridRows: Math.ceil(count / cols)
     readonly property real fit: Planner.fitScale(plan.w, plan.h, box, MonitorMetrics.scaleFloor)
 
+    property real zoom: 1
+    // Once a zoom overflowed, growth stops there until layoutKey changes, so rounding can't make it bounce.
+    property real zoomCeiling: Infinity
+    property bool settling: false
+    readonly property MonitorZoom zoomed: MonitorZoom {
+        zoom: root.zoom
+    }
+    readonly property MonitorRepeater rowRepeater: listCards ? cardRepeater : listRepeater
+    readonly property bool built: {
+        switch (layout) {
+        case "tiles":
+            return tileRepeater.built;
+        case "list":
+            return rowRepeater.built;
+        case "graphs":
+            return graphs.built;
+        }
+        return bars.built;
+    }
+    // With nothing to show (dash closed, widget hidden) settle keeps the last zoom, so a reopen lays out once.
+    readonly property bool idle: count === 0 && (!showProcesses || !active)
+    // A string, so it only signals when a device's shape changes and not on every sample.
+    readonly property string rowShape: rows.map(r => (r.asleep ? "z" : String((r.values ?? []).length)) + (r.missing ? "m" : "") + ((r.detail ?? "") !== "" ? "d" : "")).join(",")
+    readonly property string layoutKey: [width, height, JSON.stringify(config), active, rowShape, Theme.fontFamily, Theme.fontScale, Theme.fontWeight, I18n.translationsLoaded].join("|")
+    onLayoutKeyChanged: Qt.callLater(resetZoom)
+    // Deferred: writing zoom while fit's bindings update is a binding loop.
+    onFitChanged: Qt.callLater(settle)
+    onBuiltChanged: settle()
+    Component.onCompleted: settle()
+
+    function resetZoom() {
+        zoomCeiling = Infinity;
+        settle();
+    }
+
+    function settle() {
+        if (settling || idle || !built || width <= 0 || height <= 0)
+            return;
+        settling = true;
+        try {
+            polishLayouts(body);
+            for (let i = 0; i < MonitorMetrics.settlePasses; i++) {
+                const target = Math.max(MonitorMetrics.scaleFloor, Math.floor(fit * MonitorMetrics.scaleSteps) / MonitorMetrics.scaleSteps);
+                if (target < zoom)
+                    zoomCeiling = zoom;
+                else if (target === zoom || target >= zoomCeiling)
+                    break;
+                zoom = target;
+                polishLayouts(body);
+            }
+        } finally {
+            settling = false;
+        }
+    }
+
+    // Layouts only update their implicit size when polished.
+    function polishLayouts(item) {
+        for (const child of item.children)
+            polishLayouts(child);
+        item.ensurePolished();
+    }
+
     function listMax(prop, floor) {
-        const items = listCards ? cardRepeater : listRepeater;
-        void builtRows;
+        void rowRepeater.revision;
         let v = floor;
-        for (let i = 0; i < items.count; i++)
-            v = Math.max(v, items.itemAt(i)?.[prop] ?? 0);
+        for (let i = 0; i < rowRepeater.count; i++)
+            v = Math.max(v, rowRepeater.itemAt(i)?.[prop] ?? 0);
         return v;
     }
 
@@ -177,31 +237,31 @@ Item {
     Item {
         id: content
 
-        width: Math.max(root.plan.w, root.width / root.fit)
-        height: Math.max(root.plan.h, root.height / root.fit)
-        x: (root.width - width * root.fit) / 2
-        y: (root.height - height * root.fit) / 2
-        scale: root.fit
-        transformOrigin: Item.TopLeft
+        width: Math.max(root.plan.w * root.zoom, root.width)
+        height: Math.max(root.plan.h * root.zoom, root.height)
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        // Opacity rather than visible: hidden renderers empty their rows and would never build.
+        opacity: root.built ? 1 : 0
 
         Item {
             id: header
 
             anchors.left: parent.left
             anchors.right: parent.right
-            height: MonitorMetrics.headerHeight
+            height: root.zoomed.headerHeight
             visible: root.showHeader
 
             MonitorText {
                 anchors.left: parent.left
                 anchors.right: uptime.left
-                anchors.leftMargin: Theme.spacingXS
-                anchors.rightMargin: Theme.spacingS
+                anchors.leftMargin: root.zoomed.spacingXS
+                anchors.rightMargin: root.zoomed.spacingS
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.headerTitle
                 halo: root.halo
                 color: root.contentColor
-                font.pixelSize: Theme.fontSizeMedium
+                font.pixelSize: root.zoomed.fontSizeMedium
                 font.weight: Theme.fontWeightMedium
                 horizontalAlignment: Text.AlignLeft
                 wrapMode: Text.NoWrap
@@ -212,41 +272,43 @@ Item {
                 id: uptime
 
                 anchors.right: parent.right
-                anchors.rightMargin: Theme.spacingXS
+                anchors.rightMargin: root.zoomed.spacingXS
                 anchors.verticalCenter: parent.verticalCenter
                 text: DgopService.shortUptime
                 halo: root.halo
                 color: root.mutedColor
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
             }
         }
 
         Item {
             id: body
 
-            readonly property real freeHeight: parent.height - root.headerSpace - (root.showProcesses && !root.beside ? root.gap + root.processesHeight : 0)
+            readonly property real freeHeight: parent.height - (root.headerSpace + (root.showProcesses && !root.beside ? root.gap + root.processesHeight : 0)) * root.zoom
 
             anchors.left: parent.left
             anchors.top: parent.top
-            anchors.topMargin: root.headerSpace
-            width: parent.width - (root.beside ? root.processesWidth + root.gap : 0)
+            anchors.topMargin: Math.round(root.headerSpace * root.zoom)
+            width: parent.width - (root.beside ? root.zoomed.processesWidth + root.zoomed.spacingS : 0)
             height: freeHeight
             visible: root.count > 0
 
-            Repeater {
+            MonitorRepeater {
+                id: tileRepeater
+
                 model: root.layout === "tiles" ? root.count : 0
 
                 MonitorTile {
                     required property int index
                     readonly property int rest: root.count % root.cols
                     readonly property int span: rest > 0 && index === root.count - 1 ? root.cols - rest + 1 : 1
-                    readonly property real cellWidth: (body.width - (root.cols - 1) * root.gap) / root.cols
-                    readonly property real cellHeight: (body.height - (root.gridRows - 1) * root.gap) / root.gridRows
-                    readonly property real startX: (index % root.cols) * (cellWidth + root.gap)
+                    readonly property real cellWidth: (body.width - (root.cols - 1) * root.zoomed.spacingS) / root.cols
+                    readonly property real cellHeight: (body.height - (root.gridRows - 1) * root.zoomed.spacingS) / root.gridRows
+                    readonly property real startX: (index % root.cols) * (cellWidth + root.zoomed.spacingS)
 
                     x: I18n.isRtl ? body.width - startX - width : startX
-                    y: Math.floor(index / root.cols) * (cellHeight + root.gap)
-                    width: span * cellWidth + (span - 1) * root.gap
+                    y: Math.floor(index / root.cols) * (cellHeight + root.zoomed.spacingS)
+                    width: span * cellWidth + (span - 1) * root.zoomed.spacingS
                     height: cellHeight
                     row: root.rows[index] ?? ({})
                     reserveExtras: {
@@ -255,13 +317,14 @@ Item {
                     }
                     style: root.config.style ?? "icon"
                     solo: root.solo
-                    size: !root.solo || width < MonitorMetrics.wideThreshold ? "sm" : height < MonitorMetrics.wideThreshold ? "wide" : "big"
+                    size: !root.solo || width < root.zoomed.wideThreshold ? "sm" : height < root.zoomed.wideThreshold ? "wide" : "big"
                     accentColor: root.accentColor
                     tileColor: root.tileColor
                     contentColor: root.contentColor
                     mutedColor: root.mutedColor
                     trendSecondaryColor: root.trendSecondaryColor
                     radius: root.tileRadius
+                    zoomed: root.zoomed
                     halo: root.halo
                 }
             }
@@ -272,14 +335,13 @@ Item {
                 visible: root.layout === "list"
                 flow: GridLayout.TopToBottom
                 rows: root.gridRows
-                rowSpacing: root.listGap
-                columnSpacing: root.gap
+                rowSpacing: root.listGapZoomed
+                columnSpacing: root.zoomed.spacingS
 
-                Repeater {
+                MonitorRepeater {
                     id: listRepeater
 
                     model: root.layout === "list" && !root.listCards ? root.count : 0
-                    onItemAdded: root.builtRows++
 
                     MonitorListRow {
                         required property int index
@@ -295,15 +357,15 @@ Item {
                         tileColor: root.panelColor
                         contentColor: root.contentColor
                         mutedColor: root.mutedColor
+                        zoomed: root.zoomed
                         halo: root.halo
                     }
                 }
 
-                Repeater {
+                MonitorRepeater {
                     id: cardRepeater
 
                     model: root.listCards ? root.count : 0
-                    onItemAdded: root.builtRows++
 
                     MonitorListCard {
                         required property int index
@@ -321,6 +383,7 @@ Item {
                         cardRadius: root.tileRadius
                         contentColor: root.contentColor
                         mutedColor: root.mutedColor
+                        zoomed: root.zoomed
                         halo: root.halo
                     }
                 }
@@ -329,7 +392,7 @@ Item {
             MonitorText {
                 id: labelProbe
                 visible: false
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
             }
 
             MonitorBars {
@@ -345,6 +408,7 @@ Item {
                 tiled: root.tiled
                 tileColor: root.tileColor
                 tileRadius: root.tileRadius
+                zoomed: root.zoomed
                 accentColor: root.accentColor
                 contentColor: root.contentColor
                 mutedColor: root.mutedColor
@@ -363,21 +427,23 @@ Item {
                 tileColor: root.panelColor
                 contentColor: root.contentColor
                 mutedColor: root.mutedColor
+                zoomed: root.zoomed
                 halo: root.halo
             }
         }
 
         MonitorProcesses {
             anchors.right: parent.right
-            y: root.beside ? body.y + (body.height - height) / 2 : body.y + body.height + root.gap
-            width: root.beside ? root.processesWidth : parent.width
-            height: root.processesHeight
+            y: root.beside ? body.y + (body.height - height) / 2 : body.y + body.height + root.zoomed.spacingS
+            width: root.beside ? root.zoomed.processesWidth : parent.width
+            height: root.processesHeight * root.zoom
             visible: root.showProcesses
             processes: source.topProcesses
             sortBy: root.config.topProcessSortBy ?? "cpu"
             tileColor: root.panelColor
             contentColor: root.contentColor
             mutedColor: root.mutedColor
+            zoomed: root.zoomed
             halo: root.halo
         }
     }

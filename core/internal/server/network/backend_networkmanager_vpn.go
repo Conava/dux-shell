@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/Wifx/gonetworkmanager/v2"
-	"github.com/duxlabs-dev/dux-shell/core/internal/errdefs"
 	"github.com/duxlabs-dev/dux-shell/core/internal/log"
 	"github.com/godbus/dbus/v5"
 )
@@ -234,7 +233,9 @@ var errVPNLoginCancelled = errors.New("user cancelled authentication")
 func (b *NetworkManagerBackend) ConnectVPN(uuidOrName string, singleActive bool) (err error) {
 	failedUUID := uuidOrName
 	defer func() {
-		if err == nil {
+		// A cancelled browser login cached nothing, and clearing here could
+		// wipe what the newer attempt that replaced it has cached.
+		if err == nil || errors.Is(err, errVPNBrowserLoginCancelled) {
 			return
 		}
 		b.cachedVPNSecretsMu.Lock()
@@ -243,8 +244,7 @@ func (b *NetworkManagerBackend) ConnectVPN(uuidOrName string, singleActive bool)
 		b.pendingVPNSaveMu.Lock()
 		b.pendingVPNSave = nil
 		b.pendingVPNSaveMu.Unlock()
-		if errors.Is(err, errVPNLoginCancelled) || errors.Is(err, errVPNAuthDialogCancelled) ||
-			errors.Is(err, errdefs.ErrSecretPromptCancelled) {
+		if vpnConnectCancelled(err) {
 			return
 		}
 		b.stateMutex.Lock()
@@ -355,6 +355,10 @@ func (b *NetworkManagerBackend) ConnectVPN(uuidOrName string, singleActive bool)
 		}
 	}
 
+	// A new attempt replaces a browser login an earlier one still waits on.
+	// Logins the secret agent runs belong to NM activations, which can run side by side.
+	b.cancelBrowserLogin(func(o browserLoginOwner) bool { return !o.FromAgent }, false)
+
 	var vpnServiceType string
 	var vpnData map[string]string
 	if vpnSettings, ok := targetSettings["vpn"]; ok {
@@ -409,12 +413,15 @@ func (b *NetworkManagerBackend) ConnectVPN(uuidOrName string, singleActive bool)
 		log.Infof("[ConnectVPN] Fortinet SAML/SSO authentication required for %s (gateway=%s)", connName, vpnData["gateway"])
 
 		samlCtx, samlCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		openConnectAuth, err = b.authenticateFortinetSAML(samlCtx, fortinetAuthTarget{
-			ConnName:       connName,
-			ConnUUID:       targetUUID,
-			ConnectionPath: string(targetConn.GetPath()),
-			VpnService:     vpnServiceType,
-			Data:           vpnData,
+		owner := browserLoginOwner{UUID: targetUUID, Name: connName, ConnectionPath: targetConn.GetPath()}
+		openConnectAuth, err = b.runBrowserLogin(samlCtx, owner, func(ctx context.Context) (*openConnectAuthResult, error) {
+			return b.authenticateFortinetSAML(ctx, fortinetAuthTarget{
+				ConnName:       connName,
+				ConnUUID:       targetUUID,
+				ConnectionPath: string(targetConn.GetPath()),
+				VpnService:     vpnServiceType,
+				Data:           vpnData,
+			})
 		})
 		samlCancel()
 		if err != nil {
@@ -430,11 +437,16 @@ func (b *NetworkManagerBackend) ConnectVPN(uuidOrName string, singleActive bool)
 		log.Infof("[ConnectVPN] GlobalProtect SAML/SSO authentication required for %s (gateway=%s)", connName, gateway)
 
 		samlCtx, samlCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		openConnectAuth, err = b.runGlobalProtectSAMLAuth(samlCtx, gateway, protocol)
+		owner := browserLoginOwner{UUID: targetUUID, Name: connName, ConnectionPath: targetConn.GetPath()}
+		openConnectAuth, err = b.runBrowserLogin(samlCtx, owner, func(ctx context.Context) (*openConnectAuthResult, error) {
+			return b.runGlobalProtectSAMLAuth(ctx, gateway, protocol)
+		})
 		samlCancel()
 		if err != nil {
 			errMsg := err.Error()
 			switch {
+			case errors.Is(err, errVPNBrowserLoginCancelled):
+				return err
 			case strings.Contains(errMsg, "not installed"):
 				return fmt.Errorf("gp-saml-gui is not installed (required for GlobalProtect SAML/SSO VPN)")
 			case strings.Contains(errMsg, "timed out") || strings.Contains(errMsg, "cancelled"):
@@ -938,6 +950,8 @@ func (b *NetworkManagerBackend) handleOpenVPNUsernameAuth(targetConn gonetworkma
 }
 
 func (b *NetworkManagerBackend) DisconnectVPN(uuidOrName string) error {
+	cancelled := b.cancelBrowserLoginFor(uuidOrName)
+
 	nm := b.nmConn.(gonetworkmanager.NetworkManager)
 
 	activeConns, err := nm.GetPropertyActiveConnections()
@@ -965,8 +979,13 @@ func (b *NetworkManagerBackend) DisconnectVPN(uuidOrName string) error {
 
 		if uuid == uuidOrName || id == uuidOrName {
 			log.Infof("[DisconnectVPN] Deactivating VPN: %s (state=%d)", id, state)
+			b.stopConnectingVPN(uuid)
 			if err := nm.DeactivateConnection(activeConn); err != nil {
-				return fmt.Errorf("failed to deactivate VPN: %w", err)
+				// NM may already have dropped the activation whose secrets request was cancelled.
+				if cancelled == nil || !cancelled.FromAgent {
+					return fmt.Errorf("failed to deactivate VPN: %w", err)
+				}
+				log.Warnf("[DisconnectVPN] Failed to deactivate VPN after cancelling its login: %v", err)
 			}
 			b.ListActiveVPN()
 			if b.onStateChange != nil {
@@ -1023,6 +1042,9 @@ func (b *NetworkManagerBackend) DisconnectVPN(uuidOrName string) error {
 }
 
 func (b *NetworkManagerBackend) DisconnectAllVPN() error {
+	b.cancelBrowserLogin(func(browserLoginOwner) bool { return true }, true)
+	b.stopConnectingVPN("")
+
 	nm := b.nmConn.(gonetworkmanager.NetworkManager)
 
 	activeConns, err := nm.GetPropertyActiveConnections()
@@ -1058,6 +1080,34 @@ func (b *NetworkManagerBackend) DisconnectAllVPN() error {
 	}
 
 	return lastErr
+}
+
+// stopConnectingVPN drops the connecting state for uuid ("" for any VPN) before
+// a deactivation, so the ending activation is not reported as a failure.
+func (b *NetworkManagerBackend) stopConnectingVPN(uuid string) {
+	b.stateMutex.Lock()
+	connecting := b.state.ConnectingVPNUUID
+	if connecting == "" || (uuid != "" && connecting != uuid) {
+		b.stateMutex.Unlock()
+		return
+	}
+	b.state.IsConnectingVPN = false
+	b.state.ConnectingVPNUUID = ""
+	b.stateMutex.Unlock()
+
+	b.cachedPKCS11Mu.Lock()
+	b.cachedPKCS11PIN = nil
+	b.cachedPKCS11Mu.Unlock()
+	b.cachedVPNSecretsMu.Lock()
+	b.cachedVPNSecrets = nil
+	b.cachedVPNSecretsMu.Unlock()
+	b.pendingVPNSaveMu.Lock()
+	b.pendingVPNSave = nil
+	b.pendingVPNSaveMu.Unlock()
+
+	if b.onStateChange != nil {
+		b.onStateChange()
+	}
 }
 
 func (b *NetworkManagerBackend) ClearVPNCredentials(uuidOrName string) error {
@@ -1861,6 +1911,8 @@ func (b *NetworkManagerBackend) SetVPNCredentials(connUUID string, username stri
 }
 
 func (b *NetworkManagerBackend) DeleteVPN(uuidOrName string) error {
+	b.cancelBrowserLoginFor(uuidOrName)
+
 	active, _ := b.ListActiveVPN()
 	for _, vpn := range active {
 		if vpn.UUID == uuidOrName || vpn.Name == uuidOrName {

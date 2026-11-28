@@ -179,6 +179,10 @@ Singleton {
     property string vpnError: ""
     property string vpnErrorUuid: ""
     property string vpnConnectRequest: ""
+    property string vpnBrowserLoginUuid: ""
+    property int vpnRequestSeq: 0
+    readonly property string connectingVpnUuid: vpnBrowserLoginUuid || (vpnActive.find(v => v.state === "activating")?.uuid ?? "")
+    readonly property bool vpnConnecting: connectingVpnUuid !== ""
 
     property var profiles: {
         const mergedProfiles = vpnProfiles ? vpnProfiles.slice() : [];
@@ -239,8 +243,28 @@ Singleton {
         return match ? (match.state || "") : "";
     }
 
+    function resetVpnBusy() {
+        vpnIsBusy = false;
+        pendingVpnUuid = "";
+        vpnBusyStartTime = 0;
+    }
+
     function isVpnConnectingUuid(uuid) {
-        return vpnStateForUuid(uuid) === "activating" || (vpnIsBusy && pendingVpnUuid === uuid);
+        return vpnStateForUuid(uuid) === "activating" || (vpnIsBusy && pendingVpnUuid === uuid) || (!!uuid && uuid === vpnBrowserLoginUuid);
+    }
+
+    // Password prompts and plugin dialogs before activation can't be cancelled from here.
+    function canCancelVpnConnect(uuid) {
+        return !!uuid && (uuid === vpnBrowserLoginUuid || vpnStateForUuid(uuid) === "activating");
+    }
+
+    function canToggleVpn(uuid) {
+        return !vpnIsBusy || canCancelVpnConnect(uuid);
+    }
+
+    function vpnProfileIds(uuidOrName) {
+        const profile = vpnProfiles.find(p => p.uuid === uuidOrName || p.name === uuidOrName);
+        return [uuidOrName, profile?.uuid, profile?.name].filter(id => !!id);
     }
 
     property string networkInfoSSID: ""
@@ -262,6 +286,7 @@ Singleton {
     property var credentialsHints: []
     property string credentialsReason: ""
     property bool credentialsRequested: false
+    property var closedCredentialTokens: []
 
     property string pendingConnectionSSID: ""
     property var pendingConnectionStartTime: 0
@@ -270,6 +295,7 @@ Singleton {
     signal networksUpdated
     signal connectionChanged
     signal credentialsNeeded(string token, string ssid, string setting, var fields, var hints, string reason, string connType, string connName, string vpnService, var fieldsInfo)
+    signal credentialsClosed(string token)
 
     readonly property string socketPath: Quickshell.env("DMS_SOCKET")
 
@@ -318,6 +344,10 @@ Singleton {
         function onCredentialsRequest(data) {
             handleCredentialsRequest(data);
         }
+
+        function onCredentialsClosedEvent(data) {
+            handleCredentialsClosed(data);
+        }
     }
 
     function checkDMSCapabilities() {
@@ -337,7 +367,19 @@ Singleton {
         }
     }
 
+    function handleCredentialsClosed(data) {
+        const token = data.token || "";
+        if (!token)
+            return;
+        closedCredentialTokens = closedCredentialTokens.concat([token]).slice(-8);
+        if (credentialsRequested && token === credentialsToken)
+            credentialsRequested = false;
+        credentialsClosed(token);
+    }
+
     function handleCredentialsRequest(data) {
+        if (closedCredentialTokens.indexOf(data.token) !== -1)
+            return;
         credentialsToken = data.token || "";
         credentialsSSID = data.ssid || "";
         credentialsSetting = data.setting || "802-11-wireless-security";
@@ -543,6 +585,8 @@ Singleton {
             vpnProfiles = keepUnchanged(vpnProfiles, state.vpnProfiles);
         }
 
+        vpnBrowserLoginUuid = state.vpnBrowserLoginUuid || "";
+
         const previousVpnActive = vpnActive;
         vpnActive = keepUnchanged(vpnActive, state.vpnActive || []);
 
@@ -557,15 +601,13 @@ Singleton {
 
             if (busyDuration > timeout) {
                 log.warn("VPN operation timed out after", timeout, "ms");
-                vpnIsBusy = false;
-                pendingVpnUuid = "";
-                vpnBusyStartTime = 0;
+                resetVpnBusy();
             } else if (pendingVpnUuid) {
                 const isPendingVpnActive = activeUuids.includes(pendingVpnUuid);
-                if (isPendingVpnActive) {
-                    vpnIsBusy = false;
-                    pendingVpnUuid = "";
-                    vpnBusyStartTime = 0;
+                // A waiting browser login can be cancelled or replaced, so it doesn't block other connects.
+                const isPendingBrowserLogin = !!vpnBrowserLoginUuid && vpnProfileIds(pendingVpnUuid).includes(vpnBrowserLoginUuid);
+                if (isPendingVpnActive || isPendingBrowserLogin) {
+                    resetVpnBusy();
                 }
             } else {
                 const previousCount = previousVpnActive ? previousVpnActive.length : 0;
@@ -580,9 +622,7 @@ Singleton {
 
         const incomingVpnError = state.vpnError || "";
         if (incomingVpnError && (incomingVpnError !== vpnError || (state.vpnErrorUuid || "") !== vpnErrorUuid)) {
-            vpnIsBusy = false;
-            pendingVpnUuid = "";
-            vpnBusyStartTime = 0;
+            resetVpnBusy();
             const failedProfile = vpnProfiles.find(p => p.uuid === state.vpnErrorUuid);
             const failedName = failedProfile?.name || I18n.tr("VPN", "virtual private network, widget and page title");
             // A failed connect request already showed its own toast with the details.
@@ -1184,6 +1224,7 @@ Singleton {
         pendingVpnUuid = uuidOrName;
         vpnBusyStartTime = Date.now();
         vpnConnectRequest = uuidOrName;
+        const requestId = ++vpnRequestSeq;
 
         const params = {
             uuidOrName: uuidOrName,
@@ -1191,14 +1232,40 @@ Singleton {
         };
 
         DMSService.sendRequest("network.vpn.connect", params, response => {
+            const isLatest = requestId === vpnRequestSeq;
             if (response.error) {
-                vpnIsBusy = false;
-                pendingVpnUuid = "";
-                vpnBusyStartTime = 0;
-                ToastService.showError(I18n.tr("Failed to connect VPN"), response.error);
-            } else {
+                // A cancelled request gets no toast of its own; an activation failure still arrives with the state.
+                if (isLatest) {
+                    resetVpnBusy();
+                    ToastService.showError(I18n.tr("Failed to connect VPN"), response.error);
+                }
+            } else if (isLatest) {
+                // success: false means the login was cancelled, not an error.
+                if (response.result?.success === false)
+                    resetVpnBusy();
                 vpnConnectRequest = "";
             }
+        });
+    }
+
+    function cancelVpnConnect(uuidOrName) {
+        if (!vpnAvailable)
+            return;
+        const ids = vpnProfileIds(uuidOrName);
+        const cancelsPending = ids.includes(pendingVpnUuid);
+        const cancelsRequest = ids.includes(vpnConnectRequest);
+        if (cancelsPending || cancelsRequest)
+            vpnRequestSeq++;
+        if (cancelsPending)
+            resetVpnBusy();
+        if (cancelsRequest)
+            vpnConnectRequest = "";
+
+        DMSService.sendRequest("network.vpn.disconnect", {
+            uuidOrName: uuidOrName
+        }, response => {
+            if (response.error)
+                ToastService.showError(I18n.tr("Failed to disconnect", "toast title when disconnecting a network connection fails"), response.error);
         });
     }
 
@@ -1250,7 +1317,9 @@ Singleton {
 
     function toggleVpn(uuid) {
         if (uuid) {
-            if (isActiveVpnUuid(uuid)) {
+            if (canCancelVpnConnect(uuid)) {
+                cancelVpnConnect(uuid);
+            } else if (isActiveVpnUuid(uuid)) {
                 disconnectVpn(uuid);
             } else {
                 connectVpn(uuid);
@@ -1258,10 +1327,18 @@ Singleton {
             return;
         }
 
-        if (vpnConnected) {
+        if (vpnConnected && !vpnIsBusy) {
             disconnectAllVpns();
             return;
         }
+
+        if (vpnConnecting) {
+            cancelVpnConnect(connectingVpnUuid);
+            return;
+        }
+
+        if (vpnConnected)
+            return;
 
         const targetUuid = lastConnectedVpnUuid || (vpnProfiles.length > 0 ? vpnProfiles[0].uuid : "");
         if (targetUuid) {

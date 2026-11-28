@@ -18,6 +18,7 @@ Rectangle {
     property color mutedColor: Theme.surfaceVariantText
     property bool halo: false
     property bool legendBeside: false
+    required property MonitorZoom zoomed
 
     readonly property var lines: {
         const out = [];
@@ -40,12 +41,11 @@ Rectangle {
     readonly property bool allPercent: lines.length > 0 && lines.every(l => l.maximum === 100)
     readonly property string rangeLabel: I18n.tr("%1 min", "chart time span, %1 is a number of minutes").arg(rangeSeconds / 60)
 
-    // Bumped as chips arrive from an asynchronous loader.
-    property int builtChips: 0
+    readonly property bool built: sparklines.built && inlineRepeater.built && listRepeater.built
 
     // Height of the inline legend wrapped at width w, the way its Flow lays it out.
     function inlineLegendHeight(w) {
-        void builtChips;
+        void inlineRepeater.revision;
         let x = 0;
         let lineH = 0;
         let total = 0;
@@ -64,17 +64,17 @@ Rectangle {
         return total + lineH;
     }
 
-    implicitHeight: content.implicitHeight + Theme.spacingM * 2
-    radius: Theme.cornerRadiusL
+    implicitHeight: content.implicitHeight + zoomed.spacingM * 2
+    radius: zoomed.cornerRadiusL
     color: tileColor
 
     GridLayout {
         id: content
         anchors.fill: parent
-        anchors.margins: Theme.spacingM
+        anchors.margins: root.zoomed.spacingM
         columns: root.legendBeside ? 2 : 1
-        rowSpacing: Theme.spacingS
-        columnSpacing: Theme.spacingM
+        rowSpacing: root.zoomed.spacingS
+        columnSpacing: root.zoomed.spacingM
 
         Item {
             id: chart
@@ -82,8 +82,8 @@ Rectangle {
             Layout.column: 0
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: MonitorMetrics.chartMinHeight
-            Layout.preferredHeight: MonitorMetrics.chartMinHeight
+            Layout.minimumHeight: root.zoomed.chartMinHeight
+            Layout.preferredHeight: root.zoomed.chartMinHeight
             // Time runs left to right in every language.
             LayoutMirroring.enabled: false
             LayoutMirroring.childrenInherit: true
@@ -96,7 +96,7 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 text: root.rangeLabel
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 color: root.mutedColor
             }
             NumericText {
@@ -106,7 +106,7 @@ Rectangle {
                 anchors.top: parent.top
                 visible: root.allPercent
                 text: "100"
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 color: root.mutedColor
             }
 
@@ -129,7 +129,9 @@ Rectangle {
                     }
                 }
 
-                Repeater {
+                MonitorRepeater {
+                    id: sparklines
+
                     model: root.lines.length
 
                     DSparkline {
@@ -152,7 +154,7 @@ Rectangle {
             Layout.row: root.legendBeside || root.legend === "inline" ? 0 : 1
             Layout.column: root.legendBeside ? 1 : 0
             Layout.fillWidth: !root.legendBeside
-            Layout.preferredWidth: root.legendBeside ? MonitorMetrics.processesWidth : -1
+            Layout.preferredWidth: root.legendBeside ? root.zoomed.processesWidth : -1
             Layout.alignment: Qt.AlignVCenter
             implicitHeight: root.legend === "inline" ? inlineLegend.implicitHeight : listLegend.implicitHeight
             visible: root.legend !== "off" && root.lines.length > 0
@@ -161,33 +163,32 @@ Rectangle {
                 id: inlineLegend
                 width: parent.width
                 visible: root.legend === "inline"
-                spacing: Theme.spacingM
+                spacing: root.zoomed.spacingM
 
-                Repeater {
+                MonitorRepeater {
                     id: inlineRepeater
 
                     model: root.legend === "inline" ? root.lines.length : 0
-                    onItemAdded: root.builtChips++
 
                     Row {
                         id: item
                         required property int index
                         readonly property var modelData: root.lines[index] ?? ({})
-                        spacing: Theme.spacingXS
+                        spacing: root.zoomed.spacingXS
                         opacity: modelData.muted ? Theme.pendingOpacity : 1
 
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: Theme.spacingL
+                            width: root.zoomed.spacingL
                             height: Theme.outlineWidthFocused
                             radius: height / 2
                             color: item.modelData.color ?? root.contentColor
                         }
                         MonitorText {
                             halo: root.halo
-                            width: Math.min(implicitWidth, inlineLegend.width - Theme.spacingL - inlineValue.width - item.spacing * 2)
+                            width: Math.min(implicitWidth, inlineLegend.width - root.zoomed.spacingL - inlineValue.width - item.spacing * 2)
                             text: item.modelData.name ?? ""
-                            font.pixelSize: Theme.fontSizeSmall
+                            font.pixelSize: root.zoomed.fontSizeSmall
                             color: root.mutedColor
                         }
                         NumericText {
@@ -197,7 +198,7 @@ Rectangle {
                             reserveText: MonitorMetrics.reserveFor(item.modelData.kind ?? "")
                             horizontalAlignment: Text.AlignLeft
                             text: item.modelData.text ?? ""
-                            font.pixelSize: Theme.fontSizeSmall
+                            font.pixelSize: root.zoomed.fontSizeSmall
                             font.weight: Theme.fontWeightMedium
                             color: root.contentColor
                         }
@@ -209,9 +210,11 @@ Rectangle {
                 id: listLegend
                 width: parent.width
                 visible: root.legend === "list"
-                spacing: Theme.groupedListGap
+                spacing: root.zoomed.groupedListGap
 
-                Repeater {
+                MonitorRepeater {
+                    id: listRepeater
+
                     model: root.legend === "list" ? root.lines.length : 0
 
                     Rectangle {
@@ -219,26 +222,26 @@ Rectangle {
                         required property int index
                         readonly property var modelData: root.lines[index] ?? ({})
                         width: parent.width
-                        height: MonitorMetrics.processRowHeight
+                        height: root.zoomed.processRowHeight
                         color: root.tileColor.a > 0 ? Theme.withAlpha(root.contentColor, Theme.stateLayerHover) : "transparent"
-                        radius: Theme.groupedListInnerRadius
-                        topLeftRadius: index === 0 ? Theme.groupedListOuterRadius : radius
+                        radius: root.zoomed.groupedListInnerRadius
+                        topLeftRadius: index === 0 ? root.zoomed.groupedListOuterRadius : radius
                         topRightRadius: topLeftRadius
-                        bottomLeftRadius: index === root.lines.length - 1 ? Theme.groupedListOuterRadius : radius
+                        bottomLeftRadius: index === root.lines.length - 1 ? root.zoomed.groupedListOuterRadius : radius
                         bottomRightRadius: bottomLeftRadius
                         opacity: modelData.muted ? Theme.pendingOpacity : 1
 
                         Row {
                             anchors.left: parent.left
                             anchors.right: valueText.left
-                            anchors.leftMargin: Theme.spacingM
-                            anchors.rightMargin: Theme.spacingS
+                            anchors.leftMargin: root.zoomed.spacingM
+                            anchors.rightMargin: root.zoomed.spacingS
                             anchors.verticalCenter: parent.verticalCenter
-                            spacing: Theme.spacingS
+                            spacing: root.zoomed.spacingS
 
                             Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: Theme.spacingL
+                                width: root.zoomed.spacingL
                                 height: Theme.outlineWidthFocused
                                 radius: height / 2
                                 color: entry.modelData.color ?? root.contentColor
@@ -246,9 +249,9 @@ Rectangle {
                             MonitorText {
                                 halo: root.halo
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - Theme.spacingL - Theme.spacingS
+                                width: parent.width - root.zoomed.spacingL - root.zoomed.spacingS
                                 text: entry.modelData.name ?? ""
-                                font.pixelSize: Theme.fontSizeSmall
+                                font.pixelSize: root.zoomed.fontSizeSmall
                                 color: root.mutedColor
                                 elide: Text.ElideRight
                                 maximumLineCount: 1
@@ -259,12 +262,12 @@ Rectangle {
                             style: root.halo ? Text.Outline : Text.Normal
                             styleColor: Theme.surface
                             anchors.right: parent.right
-                            anchors.rightMargin: Theme.spacingM
+                            anchors.rightMargin: root.zoomed.spacingM
                             anchors.verticalCenter: parent.verticalCenter
                             reserveText: MonitorMetrics.reserveFor(entry.modelData.kind ?? "")
                             horizontalAlignment: Text.AlignRight
                             text: entry.modelData.text ?? ""
-                            font.pixelSize: Theme.fontSizeSmall
+                            font.pixelSize: root.zoomed.fontSizeSmall
                             font.weight: Theme.fontWeightMedium
                             color: root.contentColor
                         }

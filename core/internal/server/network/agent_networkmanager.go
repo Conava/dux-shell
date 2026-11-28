@@ -376,13 +376,20 @@ func (a *SecretAgent) GetSecrets(
 			samlCtx, samlCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer samlCancel()
 
-			authResult, err := a.backend.authenticateFortinetSAML(samlCtx, fortinetAuthTarget{
-				ConnName:       displayName,
-				ConnUUID:       connUuid,
-				ConnectionPath: string(path),
-				VpnService:     vpnSvc,
-				Data:           data,
+			owner := browserLoginOwner{UUID: connUuid, Name: displayName, ConnectionPath: path, FromAgent: true}
+			authResult, err := a.backend.runBrowserLogin(samlCtx, owner, func(ctx context.Context) (*openConnectAuthResult, error) {
+				return a.backend.authenticateFortinetSAML(ctx, fortinetAuthTarget{
+					ConnName:       displayName,
+					ConnUUID:       connUuid,
+					ConnectionPath: string(path),
+					VpnService:     vpnSvc,
+					Data:           data,
+				})
 			})
+			if errors.Is(err, errVPNBrowserLoginCancelled) {
+				log.Infof("[SecretAgent] Fortinet SAML login for %s was cancelled", connUuid)
+				return nil, dbus.NewError("org.freedesktop.NetworkManager.SecretAgent.Error.UserCanceled", nil)
+			}
 			if err != nil {
 				log.Warnf("[SecretAgent] Fortinet SAML authentication failed: %v", err)
 				return nil, dbus.MakeFailedError(fmt.Errorf("SAML authentication failed for the Fortinet gateway: %w", err))
@@ -423,7 +430,14 @@ func (a *SecretAgent) GetSecrets(
 			samlCtx, samlCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer samlCancel()
 
-			authResult, err := a.backend.runGlobalProtectSAMLAuth(samlCtx, gateway, protocol)
+			owner := browserLoginOwner{UUID: connUuid, Name: displayName, ConnectionPath: path, FromAgent: true}
+			authResult, err := a.backend.runBrowserLogin(samlCtx, owner, func(ctx context.Context) (*openConnectAuthResult, error) {
+				return a.backend.runGlobalProtectSAMLAuth(ctx, gateway, protocol)
+			})
+			if errors.Is(err, errVPNBrowserLoginCancelled) {
+				log.Infof("[SecretAgent] GlobalProtect SAML login for %s was cancelled", connUuid)
+				return nil, dbus.NewError("org.freedesktop.NetworkManager.SecretAgent.Error.UserCanceled", nil)
+			}
 			if err != nil {
 				log.Warnf("[SecretAgent] GlobalProtect SAML authentication failed: %v", err)
 				return nil, dbus.MakeFailedError(fmt.Errorf("GlobalProtect SAML authentication failed: %w", err))
@@ -724,6 +738,9 @@ func (a *SecretAgent) CancelGetSecrets(path dbus.ObjectPath, settingName string)
 		if err := a.prompts.Cancel(string(path), settingName); err != nil {
 			log.Warnf("[SecretAgent] Failed to cancel prompt: %v", err)
 		}
+	}
+	if a.backend != nil {
+		a.backend.cancelBrowserLogin(func(o browserLoginOwner) bool { return o.FromAgent && o.ConnectionPath == path }, false)
 	}
 
 	return nil

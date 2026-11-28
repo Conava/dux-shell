@@ -19,6 +19,8 @@ Item {
     property bool halo: false
     property bool first: false
     property bool last: false
+    required property MonitorZoom zoomed
+    readonly property bool built: lineRepeater.built
 
     readonly property var main: row.values?.[0] ?? null
     readonly property var extras: row.asleep ? [] : (row.values ?? []).slice(1)
@@ -27,9 +29,9 @@ Item {
     readonly property string valueText: row.asleep ? I18n.tr("Idle", "device state") : (main?.text ?? "—")
 
     // From the lines the row shows, not their live text, so it holds still while values change.
-    readonly property real naturalHeight: Math.max(MonitorMetrics.listRowMinHeight, Theme.spacingS * 2 + nameText.implicitHeight + ((root.row.detail ?? "") !== "" ? Theme.spacingXXS + detailText.implicitHeight : 0) + (root.extras.length > 0 ? Theme.spacingXXS * 2 + extrasRow.implicitHeight : 0))
+    readonly property real naturalHeight: Math.max(zoomed.listRowMinHeight, zoomed.spacingS * 2 + nameText.implicitHeight + ((root.row.detail ?? "") !== "" ? zoomed.spacingXXS + detailText.implicitHeight : 0) + (root.extras.length > 0 ? zoomed.spacingXXS * 2 + extrasRow.implicitHeight : 0))
 
-    implicitWidth: content.implicitWidth + Theme.spacingM * 2
+    implicitWidth: content.implicitWidth + zoomed.spacingM * 2
     implicitHeight: naturalHeight
     Accessible.role: Accessible.StaticText
     Accessible.name: (row.name ?? "") + " " + valueText
@@ -37,9 +39,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: root.tileColor
-        topLeftRadius: root.first ? Theme.groupedListOuterRadius : Theme.groupedListInnerRadius
+        topLeftRadius: root.first ? root.zoomed.groupedListOuterRadius : root.zoomed.groupedListInnerRadius
         topRightRadius: topLeftRadius
-        bottomLeftRadius: root.last ? Theme.groupedListOuterRadius : Theme.groupedListInnerRadius
+        bottomLeftRadius: root.last ? root.zoomed.groupedListOuterRadius : root.zoomed.groupedListInnerRadius
         bottomRightRadius: bottomLeftRadius
     }
 
@@ -48,13 +50,13 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: Theme.spacingM
-        spacing: Theme.spacingM
+        anchors.margins: root.zoomed.spacingM
+        spacing: root.zoomed.spacingM
 
         DeviceIcon {
             Layout.alignment: Qt.AlignVCenter
             name: root.row.icon ?? ""
-            size: Theme.iconSizeMedium
+            size: root.zoomed.iconSizeMedium
             color: root.mutedColor
         }
 
@@ -62,7 +64,7 @@ Item {
             Layout.fillWidth: true
             Layout.minimumWidth: extrasRow.implicitWidth
             Layout.alignment: Qt.AlignVCenter
-            spacing: Theme.spacingXXS
+            spacing: root.zoomed.spacingXXS
 
             MonitorText {
                 id: nameText
@@ -70,7 +72,7 @@ Item {
                 Layout.fillWidth: true
                 text: root.row.name ?? ""
                 color: root.contentColor
-                font.pixelSize: Theme.fontSizeMedium
+                font.pixelSize: root.zoomed.fontSizeMedium
                 font.weight: Theme.fontWeightMedium
                 horizontalAlignment: Text.AlignLeft
                 wrapMode: Text.NoWrap
@@ -85,7 +87,7 @@ Item {
                 visible: text !== ""
                 text: root.row.detail ?? ""
                 color: root.mutedColor
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 horizontalAlignment: Text.AlignLeft
                 wrapMode: Text.NoWrap
                 elide: Text.ElideRight
@@ -94,11 +96,13 @@ Item {
             Row {
                 id: extrasRow
 
-                Layout.topMargin: Theme.spacingXXS
+                Layout.topMargin: root.zoomed.spacingXXS
                 visible: root.extras.length > 0
-                spacing: Theme.spacingM
+                spacing: root.zoomed.spacingM
 
-                Repeater {
+                MonitorRepeater {
+                    id: lineRepeater
+
                     model: root.extras.length
 
                     Row {
@@ -107,14 +111,14 @@ Item {
                         required property int index
                         readonly property var modelData: root.extras[index] ?? ({})
 
-                        spacing: Theme.spacingXS
+                        spacing: root.zoomed.spacingXS
                         Accessible.role: Accessible.StaticText
                         Accessible.name: (modelData.label ?? "") + " " + (modelData.text ?? "")
 
                         DIcon {
                             anchors.verticalCenter: parent.verticalCenter
                             name: chip.modelData.icon ?? ""
-                            size: Theme.iconSizeSmall
+                            size: root.zoomed.iconSizeSmall
                             color: MonitorMetrics.levelColor(chip.modelData?.level, root.accentColor)
                         }
 
@@ -125,7 +129,7 @@ Item {
                             reserveText: MonitorMetrics.reserveFor(chip.modelData.kind ?? "")
                             horizontalAlignment: Text.AlignLeft
                             text: chip.modelData.text ?? "—"
-                            font.pixelSize: Theme.fontSizeSmall
+                            font.pixelSize: root.zoomed.fontSizeSmall
                             color: root.mutedColor
                         }
                     }
@@ -135,8 +139,8 @@ Item {
 
         DSparkline {
             Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: MonitorMetrics.listVisualWidth
-            Layout.preferredHeight: MonitorMetrics.listVisualHeight
+            Layout.preferredWidth: root.zoomed.listVisualWidth
+            Layout.preferredHeight: root.zoomed.listVisualHeight
             visible: root.showTrend
             values: root.row.trend?.values ?? []
             secondaryValues: root.row.trend?.secondaryValues ?? []
@@ -154,7 +158,7 @@ Item {
             reserveText: MonitorMetrics.reserveFor(root.main?.kind ?? "pct")
             horizontalAlignment: Text.AlignRight
             text: root.valueText
-            font.pixelSize: Theme.fontSizeLarge
+            font.pixelSize: root.zoomed.fontSizeLarge
             font.weight: Theme.fontWeightMedium
             color: root.row.asleep ? root.mutedColor : root.contentColor
         }

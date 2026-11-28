@@ -20,19 +20,20 @@ Column {
     property bool halo: false
     // One sortBy value per row with a meter scaled to the largest, instead of CPU and memory.
     property bool meter: false
-    property real rowHeight: MonitorMetrics.processRowHeight
+    required property MonitorZoom zoomed
+    property real rowHeight: zoomed.processRowHeight
 
-    readonly property real cpuWidth: Theme.fontSizeSmall * 6
-    readonly property real memoryWidth: Theme.fontSizeSmall * 8
-    readonly property real meterNameWidth: Theme.fontSizeSmall * 12
-    readonly property real meterValueWidth: Theme.fontSizeSmall * 7
+    readonly property real cpuWidth: zoomed.fontSizeSmall * 6
+    readonly property real memoryWidth: zoomed.fontSizeSmall * 8
+    readonly property real meterNameWidth: zoomed.fontSizeSmall * 12
+    readonly property real meterValueWidth: zoomed.fontSizeSmall * 7
     readonly property real meterMaximum: meter ? processes.reduce((m, p) => Math.max(m, meterValue(p)), 0) : 0
 
     function meterValue(process) {
         return ProcessSort.rawValue(sortBy, process ?? {}) ?? 0;
     }
 
-    spacing: Theme.groupedListGap
+    spacing: zoomed.groupedListGap
 
     Repeater {
         model: root.processes.length
@@ -48,10 +49,10 @@ Column {
             width: root.width
             height: root.rowHeight
             color: root.tileColor
-            radius: Theme.groupedListInnerRadius
-            topLeftRadius: index === 0 ? Theme.groupedListOuterRadius : radius
+            radius: root.zoomed.groupedListInnerRadius
+            topLeftRadius: index === 0 ? root.zoomed.groupedListOuterRadius : radius
             topRightRadius: topLeftRadius
-            bottomLeftRadius: index === root.processes.length - 1 ? Theme.groupedListOuterRadius : radius
+            bottomLeftRadius: index === root.processes.length - 1 ? root.zoomed.groupedListOuterRadius : radius
             bottomRightRadius: bottomLeftRadius
             Accessible.role: Accessible.StaticText
             Accessible.name: name + " " + (root.meter ? meterText.text : cpuText.text + " " + memoryText.text)
@@ -59,8 +60,12 @@ Column {
             ProcessAppIcon {
                 id: appIcon
                 anchors.left: parent.left
-                anchors.leftMargin: Theme.spacingM
+                anchors.leftMargin: root.zoomed.spacingM
                 anchors.verticalCenter: parent.verticalCenter
+                width: root.zoomed.px(ProcessListMetrics.appIconSize)
+                height: width
+                radius: root.zoomed.cornerRadiusXS
+                fontSize: root.zoomed.fontSizeSmall
                 process: row.modelData
                 appEntry: row.entry
                 fallbackColor: Theme.withAlpha(root.contentColor, Theme.stateLayerFocus)
@@ -71,12 +76,12 @@ Column {
             MonitorText {
                 halo: root.halo
                 anchors.left: appIcon.right
-                anchors.leftMargin: Theme.spacingS
+                anchors.leftMargin: root.zoomed.spacingS
                 anchors.right: root.meter ? track.left : cpuText.left
-                anchors.rightMargin: root.meter ? Theme.spacingM : Theme.spacingS
+                anchors.rightMargin: root.meter ? root.zoomed.spacingM : root.zoomed.spacingS
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.name
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 color: root.contentColor
                 textFormat: Text.PlainText
                 maximumLineCount: 1
@@ -87,11 +92,11 @@ Column {
                 id: track
                 visible: root.meter
                 anchors.left: appIcon.right
-                anchors.leftMargin: Theme.spacingS + root.meterNameWidth + Theme.spacingM
+                anchors.leftMargin: root.zoomed.spacingS + root.meterNameWidth + root.zoomed.spacingM
                 anchors.right: meterText.left
-                anchors.rightMargin: Theme.spacingM
+                anchors.rightMargin: root.zoomed.spacingM
                 anchors.verticalCenter: parent.verticalCenter
-                height: MonitorMetrics.cardBarThickness
+                height: root.zoomed.cardBarThickness
                 color: Theme.withAlpha(Theme.primary, Theme.stateLayerFocus)
                 fraction: root.meterMaximum > 0 ? Math.min(1, root.meterValue(row.modelData) / root.meterMaximum) : 0
             }
@@ -101,12 +106,12 @@ Column {
                 visible: root.meter
                 halo: root.halo
                 anchors.right: parent.right
-                anchors.rightMargin: Theme.spacingM
+                anchors.rightMargin: root.zoomed.spacingM
                 anchors.verticalCenter: parent.verticalCenter
                 width: root.meterValueWidth
                 horizontalAlignment: Text.AlignRight
                 text: !root.meter ? "" : root.sortBy === "gpu" ? root.meterValue(row.modelData).toFixed(1) + "%" : ProcessColumns.formatCell(root.sortBy, row.modelData) ?? "—"
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
                 font.features: {
                     "tnum": 1
@@ -123,7 +128,7 @@ Column {
                 width: root.cpuWidth
                 horizontalAlignment: Text.AlignRight
                 text: (row.modelData.cpu ?? 0).toFixed(1) + "%"
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 font.weight: root.sortBy === "cpu" ? Theme.fontWeightMedium : Font.Normal
                 font.features: {
                     "tnum": 1
@@ -136,12 +141,12 @@ Column {
                 visible: !root.meter
                 halo: root.halo
                 anchors.right: parent.right
-                anchors.rightMargin: Theme.spacingM
+                anchors.rightMargin: root.zoomed.spacingM
                 anchors.verticalCenter: parent.verticalCenter
                 width: root.memoryWidth
                 horizontalAlignment: Text.AlignRight
                 text: Format.formatBytes(row.modelData.memoryKB * 1024, true)
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 font.weight: root.sortBy === "memory" ? Theme.fontWeightMedium : Font.Normal
                 font.features: {
                     "tnum": 1

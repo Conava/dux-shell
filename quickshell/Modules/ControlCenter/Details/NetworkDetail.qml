@@ -646,14 +646,8 @@ Item {
                             });
                         }
 
-                        leading: Loader {
-                            active: wifiRow.isConnecting
-                            visible: active
-                            sourceComponent: DSpinner {
-                                size: Theme.iconSizeMedium
-                                strokeWidth: CcMetrics.spinnerStroke
-                                color: Theme.warning
-                            }
+                        leading: CcConnectingSpinner {
+                            visible: wifiRow.isConnecting
                         }
 
                         Loader {

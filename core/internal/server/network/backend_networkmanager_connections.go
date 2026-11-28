@@ -417,6 +417,7 @@ func (b *NetworkManagerBackend) AddConnectionProfile(settings SettingsPatch, per
 }
 
 func (b *NetworkManagerBackend) DeleteConnectionProfile(uuid string) error {
+	b.cancelBrowserLoginFor(uuid)
 	conn, err := b.findConnectionByUUID(uuid)
 	if err != nil {
 		return err

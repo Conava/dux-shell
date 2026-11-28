@@ -21,17 +21,19 @@ Item {
     property color contentColor: Theme.surfaceText
     property color mutedColor: Theme.surfaceVariantText
     property bool halo: false
+    required property MonitorZoom zoomed
+    readonly property bool built: lineRepeater.built
 
     readonly property bool asleep: row.asleep === true
-    readonly property var entries: asleep ? (row.values ?? []).slice(0, 1) : (row.values ?? [])
-    readonly property real naturalHeight: content.implicitHeight + Theme.spacingS * 2
+    readonly property var entries: MonitorMetrics.shownEntries(row)
+    readonly property real naturalHeight: content.implicitHeight + zoomed.spacingS * 2
 
-    implicitWidth: content.implicitWidth + Theme.spacingM * 2
+    implicitWidth: content.implicitWidth + zoomed.spacingM * 2
     implicitHeight: naturalHeight
 
     Rectangle {
         anchors.fill: parent
-        radius: root.cardRadius
+        radius: root.zoomed.radius(root.cardRadius)
         color: root.cardColor
     }
 
@@ -41,33 +43,33 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: Theme.spacingM
-        anchors.rightMargin: Theme.spacingM
+        anchors.leftMargin: root.zoomed.spacingM
+        anchors.rightMargin: root.zoomed.spacingM
         columns: root.stacked ? 1 : 2
-        columnSpacing: Theme.spacingM
-        rowSpacing: Theme.spacingS
+        columnSpacing: root.zoomed.spacingM
+        rowSpacing: root.zoomed.spacingS
 
         GridLayout {
             Layout.alignment: root.stacked ? Qt.AlignLeft : Qt.AlignCenter
-            Layout.preferredWidth: root.stacked ? -1 : MonitorMetrics.barNameWidth
+            Layout.preferredWidth: root.stacked ? -1 : root.zoomed.barNameWidth
             columns: root.stacked ? 2 : 1
-            columnSpacing: Theme.spacingS
-            rowSpacing: Theme.spacingXS
+            columnSpacing: root.zoomed.spacingS
+            rowSpacing: root.zoomed.spacingXS
 
             DeviceIcon {
                 Layout.alignment: root.stacked ? Qt.AlignVCenter : Qt.AlignHCenter
                 name: root.row.icon ?? ""
-                size: Theme.iconSizeSmall
+                size: root.zoomed.iconSizeSmall
                 color: root.mutedColor
             }
 
             MonitorText {
                 Layout.alignment: root.stacked ? Qt.AlignVCenter : Qt.AlignHCenter
-                Layout.maximumWidth: MonitorMetrics.barNameWidth
+                Layout.maximumWidth: root.zoomed.barNameWidth
                 halo: root.halo
                 text: root.row.name ?? ""
                 color: root.contentColor
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
                 elide: Text.ElideRight
             }
@@ -76,9 +78,11 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
-            spacing: Theme.spacingS
+            spacing: root.zoomed.spacingS
 
-            Repeater {
+            MonitorRepeater {
+                id: lineRepeater
+
                 model: root.entries.length
 
                 RowLayout {
@@ -90,7 +94,7 @@ Item {
                     readonly property string valueText: root.asleep ? I18n.tr("Idle", "device state") : (entry.shortText ?? entry.text ?? "—")
 
                     Layout.fillWidth: true
-                    spacing: Theme.spacingS
+                    spacing: root.zoomed.spacingS
                     Accessible.role: Accessible.StaticText
                     Accessible.name: (root.row.name ?? "") + " " + (entry.label ?? "") + " " + valueText
 
@@ -99,15 +103,15 @@ Item {
                         halo: root.halo
                         text: SysmonService.shortValueLabel(root.row.type ?? "", line.entry.id ?? "")
                         color: root.mutedColor
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideRight
                     }
 
                     MonitorTrack {
                         Layout.fillWidth: true
-                        Layout.minimumWidth: MonitorMetrics.listVisualWidth / 2
-                        Layout.preferredHeight: MonitorMetrics.cardBarThickness
+                        Layout.minimumWidth: root.zoomed.listVisualWidth / 2
+                        Layout.preferredHeight: root.zoomed.cardBarThickness
                         Layout.alignment: Qt.AlignVCenter
                         color: Theme.withAlpha(root.contentColor, Theme.stateLayerFocus)
                         fraction: line.fraction
@@ -122,7 +126,7 @@ Item {
                         reserveText: root.valueReserve
                         horizontalAlignment: Text.AlignRight
                         text: line.valueText
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         font.weight: line.index === 0 ? Theme.fontWeightMedium : Font.Normal
                         color: root.asleep || line.index > 0 ? root.mutedColor : root.contentColor
                     }

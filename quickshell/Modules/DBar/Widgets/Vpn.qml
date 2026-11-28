@@ -52,7 +52,7 @@ BasePill {
         hoverEnabled: true
         cursorShape: DMSNetworkService.isBusy ? Qt.BusyCursor : Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        enabled: !DMSNetworkService.isBusy
+        enabled: !DMSNetworkService.isBusy || DMSNetworkService.vpnConnecting
         onPressed: event => {
             root.triggerRipple(this, event.x, event.y);
             switch (event.button) {
