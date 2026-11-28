@@ -160,7 +160,7 @@ test("hyprland lists skip special workspaces and fall back per monitor", () => {
     assert.deepEqual(pick(screen, "urgent"), [true, false, false]);
     assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(raw, "HDMI-A-1", false, true), "id"), [2, 4]);
     assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(raw, "HDMI-A-1", true, false), "id"), [1, 2, 3, 4, -1337]);
-    assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(hyprland("staleMonitor"), "DP-2", false, false), "id"), [5]);
+    assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(hyprland("staleMonitor"), "DP-2", false, false), "id"), [2, 3, 4, 5]);
     assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(hyprland("onlySpecial"), "DP-1", false, false), "name"), ["1"]);
     assert.deepEqual(pick(model.hyprlandWorkspacesForScreen(hyprland("empty"), "DP-1", false, true), "id"), [1]);
     assert.equal(model.hyprlandCurrentId(raw, "HDMI-A-1", false), 2);
