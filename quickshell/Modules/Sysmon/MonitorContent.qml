@@ -170,14 +170,19 @@ Item {
     onFitChanged: Qt.callLater(settle)
     onBuiltChanged: settle()
     Component.onCompleted: settle()
+    Window.onWindowChanged: {
+        if (Window.window)
+            Qt.callLater(resetZoom);
+    }
 
     function resetZoom() {
         zoomCeiling = Infinity;
         settle();
     }
 
+    // Polishing a Shape outside a window crashes on Qt 6.11.
     function settle() {
-        if (settling || idle || !built || width <= 0 || height <= 0)
+        if (settling || idle || !built || width <= 0 || height <= 0 || !Window.window)
             return;
         settling = true;
         try {
