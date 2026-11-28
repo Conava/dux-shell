@@ -147,7 +147,7 @@ function defaultDesktopConfig() {
     return {
         layout: "tiles",
         style: "icon",
-        barStyle: "brackets",
+        barStyle: "tiles",
         listStyle: "rows",
         metrics: [
             {device: "cpu", vals: ["usage", "temp"], graph: true, on: true},

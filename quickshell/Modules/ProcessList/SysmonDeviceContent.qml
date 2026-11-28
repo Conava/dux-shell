@@ -200,6 +200,7 @@ Column {
             processes: root.topProcesses
             sortBy: root.sortKey
             tileColor: ProcessListMetrics.cardColor
+            zoomed: MonitorZoom {}
         }
     }
 }

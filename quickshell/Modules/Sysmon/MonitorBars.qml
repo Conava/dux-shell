@@ -22,34 +22,38 @@ Item {
     property color tileColor: "transparent"
     property real tileRadius: Theme.cornerRadiusL
     property bool tiled: false
-    readonly property real tilePad: !tiled ? 0 : vertical ? Theme.spacingS : Theme.spacingM
+    required property MonitorZoom zoomed
+    readonly property real tilePad: !tiled ? 0 : vertical ? zoomed.spacingS : zoomed.spacingM
     readonly property string idleText: I18n.tr("Idle", "device state")
     readonly property int count: rows.length
 
     readonly property string readLetter: I18n.tr("R", "system monitor bars: short marker for disk read")
     readonly property string writeLetter: I18n.tr("W", "system monitor bars: short marker for disk write", true)
+    readonly property bool letterMarkers: rows.some(r => MonitorMetrics.shownEntries(r).some(e => hasMarker(r, e) && (e?.id === "read" || e?.id === "write")))
     // Letter markers are translated, so their column fits the wider one.
-    readonly property real markerWidth: Math.max(MonitorMetrics.markerSize, Math.ceil(DCommon.Fonts.textWidth(markerProbe.font, readLetter)), Math.ceil(DCommon.Fonts.textWidth(markerProbe.font, writeLetter)))
-    readonly property real columnWidth: Math.max(shortProbe.reservedWidth, markerWidth, MonitorMetrics.barWidth)
-    readonly property real columnGap: Theme.spacingXS
+    readonly property real markerWidth: letterMarkers ? Math.max(zoomed.markerSize, Math.ceil(DCommon.Fonts.textWidth(markerProbe.font, readLetter)), Math.ceil(DCommon.Fonts.textWidth(markerProbe.font, writeLetter))) : zoomed.markerSize
+    readonly property bool markers: rows.some(r => MonitorMetrics.shownEntries(r).some(e => hasMarker(r, e)))
+    readonly property real columnWidth: Math.max(shortProbe.reservedWidth, markers ? markerWidth : 0, zoomed.barWidth)
+    // Only the gaps follow the font scale, so larger values don't crowd while bars and icons keep their size.
+    readonly property real columnGap: zoomed.spacingXS * Theme.fontScale
+    readonly property real looseGap: zoomed.spacingS * Theme.fontScale
     property real availableHeight: Infinity
     // A single value's group is two lines tall, so its bracket keeps its shape, unless the stack then needs columns.
-    readonly property bool tight: !vertical && stackHeight(2, Theme.spacingS, tilePad, Theme.spacingS) > availableHeight
+    readonly property bool tight: !vertical && stackHeight(2, zoomed.spacingS, tilePad, looseGap) > availableHeight
     readonly property int minLines: tight ? 1 : 2
-    readonly property real lineGap: tight ? Theme.spacingXS : Theme.spacingS
+    readonly property real lineGap: tight ? zoomed.spacingXS : zoomed.spacingS
     readonly property bool shortValues: vertical || tiled
-    readonly property real lineHeight: Math.max(fullProbe.implicitHeight, MonitorMetrics.markerSize)
-    readonly property real columnHeight: shortProbe.implicitHeight + MonitorMetrics.barThickness + MonitorMetrics.markerSize + Theme.spacingXS * 2
+    readonly property real lineHeight: Math.max(fullProbe.implicitHeight, markers ? zoomed.markerSize : 0)
+    readonly property real columnHeight: shortProbe.implicitHeight + zoomed.barThickness + zoomed.spacingXS + (markers ? zoomed.markerSize + zoomed.spacingXS : 0)
 
     property int columns: 1
-    readonly property real minGap: tight && tiled ? Theme.spacingXS : Theme.spacingS
-    readonly property real tilePadY: tight ? Math.min(tilePad, Theme.spacingXS) : tilePad
-    // Bumped as groups arrive from an asynchronous loader.
-    property int builtGroups: 0
+    readonly property real minGap: tight && tiled ? columnGap : looseGap
+    readonly property real tilePadY: tight ? Math.min(tilePad, zoomed.spacingXS) : tilePad
+    readonly property bool built: groups.built
     readonly property real groupWidth: largest("implicitWidth")
     readonly property real groupHeight: largest("implicitHeight")
     readonly property real stackLength: {
-        void builtGroups;
+        void groups.revision;
         let s = Math.max(0, count - 1) * minGap;
         for (let i = 0; i < groups.count; i++)
             s += groups.itemAt(i)?.[vertical ? "implicitWidth" : "implicitHeight"] ?? 0;
@@ -65,21 +69,34 @@ Item {
     function stackHeight(minLines, gap, pad, groupGap) {
         let s = Math.max(0, count - 1) * groupGap;
         for (const r of rows) {
-            const n = Math.max(r.asleep ? 1 : (r.values ?? []).length, minLines);
-            s += Math.max(n * lineHeight + (n - 1) * gap, Theme.iconSizeSmall) + pad * 2;
+            const n = Math.max(MonitorMetrics.shownEntries(r).length, minLines);
+            s += Math.max(n * lineHeight + (n - 1) * gap, zoomed.iconSizeSmall) + pad * 2;
         }
         return s;
     }
 
     function largest(prop) {
-        void builtGroups;
+        void groups.revision;
         let v = 0;
         for (let i = 0; i < groups.count; i++)
             v = Math.max(v, groups.itemAt(i)?.[prop] ?? 0);
         return v;
     }
 
+    // Markers tell apart values of one device that share a unit, and label the clock when its short value drops "GHz".
+    function hasMarker(row, entry) {
+        if (row?.asleep)
+            return false;
+        const id = entry?.id ?? "";
+        return id === "read" || id === "write" || (shortValues && entry?.kind === "clock") || MonitorMetrics.shownEntries(row).filter(e => e?.kind === entry?.kind).length > 1;
+    }
+
     function markerFor(row, entry) {
+        if (!hasMarker(row, entry))
+            return {
+                "icon": "",
+                "text": ""
+            };
         const id = entry?.id ?? "";
         if (id === "read" || id === "write")
             return {
@@ -100,7 +117,7 @@ Item {
         visible: false
         text: ""
         reserveText: MonitorMetrics.widestReserve(root.rows, true)
-        font.pixelSize: Theme.fontSizeSmall
+        font.pixelSize: root.zoomed.fontSizeMedium
         font.weight: Theme.fontWeightMedium
     }
 
@@ -109,14 +126,14 @@ Item {
         visible: false
         text: ""
         reserveText: MonitorMetrics.widestReserve(root.rows, false)
-        font.pixelSize: Theme.fontSizeSmall
+        font.pixelSize: root.zoomed.fontSizeMedium
         font.weight: Theme.fontWeightMedium
     }
 
     MonitorText {
         id: markerProbe
         visible: false
-        font.pixelSize: Theme.fontSizeXSmall
+        font.pixelSize: root.zoomed.fontSizeXSmall
         font.weight: Theme.fontWeightMedium
     }
 
@@ -124,7 +141,7 @@ Item {
         id: idleProbe
         visible: false
         text: root.idleText
-        font.pixelSize: Theme.fontSizeSmall
+        font.pixelSize: root.zoomed.fontSizeMedium
         font.weight: Theme.fontWeightMedium
     }
 
@@ -144,14 +161,15 @@ Item {
         required property BarLine owner
         readonly property var mark: root.markerFor(owner.row, owner.entry)
 
+        visible: root.markers
         implicitWidth: root.markerWidth
-        implicitHeight: MonitorMetrics.markerSize
+        implicitHeight: root.zoomed.markerSize
 
         DIcon {
             anchors.centerIn: parent
             visible: marker.mark.icon !== ""
             name: marker.mark.icon
-            size: MonitorMetrics.markerSize
+            size: root.zoomed.markerSize
             color: root.mutedColor
         }
 
@@ -161,7 +179,7 @@ Item {
             halo: root.halo
             text: marker.mark.text
             color: root.mutedColor
-            font.pixelSize: Theme.fontSizeXSmall
+            font.pixelSize: markerProbe.font.pixelSize
             font.weight: Theme.fontWeightMedium
         }
     }
@@ -172,8 +190,8 @@ Item {
         style: root.halo ? Text.Outline : Text.Normal
         styleColor: Theme.surface
         text: owner.valueText
-        font.pixelSize: Theme.fontSizeSmall
-        font.weight: owner.index === 0 ? Theme.fontWeightMedium : Font.Normal
+        font.pixelSize: shortProbe.font.pixelSize
+        font.weight: Theme.fontWeightMedium
         color: owner.asleep ? root.mutedColor : root.contentColor
     }
 
@@ -198,7 +216,7 @@ Item {
             id: verticalColumn
             anchors.fill: parent
             visible: root.vertical
-            spacing: Theme.spacingXS
+            spacing: root.zoomed.spacingXS
 
             Value {
                 owner: line
@@ -209,8 +227,8 @@ Item {
                 owner: line
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: true
-                Layout.preferredWidth: MonitorMetrics.barWidth
-                Layout.minimumHeight: MonitorMetrics.barThickness
+                Layout.preferredWidth: root.zoomed.barWidth
+                Layout.minimumHeight: root.zoomed.barThickness
             }
 
             Marker {
@@ -223,7 +241,7 @@ Item {
             id: horizontalLine
             anchors.fill: parent
             visible: !root.vertical
-            spacing: Theme.spacingS
+            spacing: root.zoomed.spacingS
 
             Marker {
                 owner: line
@@ -233,9 +251,9 @@ Item {
             Track {
                 owner: line
                 Layout.fillWidth: true
-                Layout.minimumWidth: MonitorMetrics.barThickness * 2
+                Layout.minimumWidth: root.zoomed.barThickness * 2
                 Layout.alignment: Qt.AlignVCenter
-                Layout.preferredHeight: MonitorMetrics.barWidth
+                Layout.preferredHeight: root.zoomed.barWidth
             }
 
             Value {
@@ -253,7 +271,7 @@ Item {
         opacity: MonitorMetrics.bracketOpacity
 
         Rectangle {
-            readonly property real r: MonitorMetrics.bracketDepth
+            readonly property real r: root.zoomed.bracketDepth
 
             x: root.vertical || !I18n.isRtl ? 0 : -r
             y: root.vertical ? -r : 0
@@ -261,7 +279,7 @@ Item {
             height: parent.height + (root.vertical ? r : 0)
             radius: r
             color: "transparent"
-            border.width: MonitorMetrics.bracketStroke
+            border.width: root.zoomed.bracketStroke
             border.color: root.mutedColor
         }
     }
@@ -270,7 +288,7 @@ Item {
         required property var row
 
         name: row.icon ?? ""
-        size: Theme.iconSizeSmall
+        size: root.zoomed.iconSizeSmall
         color: root.mutedColor
     }
 
@@ -281,7 +299,7 @@ Item {
         halo: root.halo
         text: row.name ?? ""
         color: root.mutedColor
-        font.pixelSize: Theme.fontSizeSmall
+        font.pixelSize: root.zoomed.fontSizeSmall
         elide: Text.ElideRight
     }
 
@@ -290,9 +308,10 @@ Item {
 
         required property var row
 
-        readonly property var entries: row.asleep ? (row.values ?? []).slice(0, 1) : (row.values ?? [])
+        readonly property var entries: MonitorMetrics.shownEntries(row)
         readonly property real pad: root.tilePad
         readonly property real padY: root.vertical ? pad : root.tilePadY
+        readonly property bool built: (root.vertical ? verticalLines : horizontalLines).built
 
         implicitWidth: (root.vertical ? verticalGroup.implicitWidth : horizontalGroup.implicitWidth) + pad * 2
         implicitHeight: (root.vertical ? verticalGroup.implicitHeight : horizontalGroup.implicitHeight) + padY * 2
@@ -300,7 +319,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             visible: root.tiled
-            radius: root.tileRadius
+            radius: root.zoomed.radius(root.tileRadius)
             color: root.tileColor
         }
 
@@ -309,7 +328,7 @@ Item {
             anchors.fill: parent
             anchors.margins: group.pad
             visible: root.vertical
-            spacing: Theme.spacingXS
+            spacing: root.zoomed.spacingXS
 
             Item {
                 Layout.alignment: Qt.AlignHCenter
@@ -323,7 +342,9 @@ Item {
                     height: parent.height
                     spacing: root.columnGap
 
-                    Repeater {
+                    MonitorRepeater {
+                        id: verticalLines
+
                         model: root.vertical ? group.entries.length : 0
 
                         BarLine {
@@ -338,8 +359,8 @@ Item {
             Bracket {
                 visible: !root.tiled
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: columns.implicitWidth - Theme.spacingXXS * 2
-                Layout.preferredHeight: MonitorMetrics.bracketDepth
+                Layout.preferredWidth: columns.implicitWidth - root.zoomed.spacingXXS * 2
+                Layout.preferredHeight: root.zoomed.bracketDepth
             }
 
             GroupIcon {
@@ -350,7 +371,7 @@ Item {
             GroupName {
                 row: group.row
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: Math.min(implicitWidth, MonitorMetrics.barNameWidth)
+                Layout.preferredWidth: Math.min(implicitWidth, root.zoomed.barNameWidth)
             }
         }
 
@@ -362,7 +383,7 @@ Item {
             anchors.topMargin: group.padY
             anchors.bottomMargin: group.padY
             visible: !root.vertical
-            spacing: Theme.spacingS
+            spacing: root.zoomed.spacingS
 
             GroupIcon {
                 row: group.row
@@ -372,7 +393,7 @@ Item {
             GroupName {
                 row: group.row
                 Layout.alignment: Qt.AlignVCenter
-                Layout.preferredWidth: MonitorMetrics.barNameWidth
+                Layout.preferredWidth: root.zoomed.barNameWidth
                 color: root.contentColor
                 font.weight: Theme.fontWeightMedium
             }
@@ -381,12 +402,12 @@ Item {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredHeight: Math.max(lines.implicitHeight, root.lineHeight * root.minLines + root.lineGap * (root.minLines - 1))
-                spacing: Theme.spacingS
+                spacing: root.zoomed.spacingS
 
                 Bracket {
                     visible: !root.tiled
                     Layout.fillHeight: true
-                    Layout.preferredWidth: MonitorMetrics.bracketDepth
+                    Layout.preferredWidth: root.zoomed.bracketDepth
                 }
 
                 ColumnLayout {
@@ -395,7 +416,9 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
                     spacing: root.lineGap
 
-                    Repeater {
+                    MonitorRepeater {
+                        id: horizontalLines
+
                         model: root.vertical ? 0 : group.entries.length
 
                         BarLine {
@@ -415,11 +438,10 @@ Item {
         rowSpacing: root.vertical ? 0 : root.minGap
         columnSpacing: root.minGap
 
-        Repeater {
+        MonitorRepeater {
             id: groups
 
             model: root.count
-            onItemAdded: root.builtGroups++
 
             Group {
                 required property int index
