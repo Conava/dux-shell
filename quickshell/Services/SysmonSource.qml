@@ -95,11 +95,10 @@ QtObject {
     }
     Component.onDestruction: syncGpus([])
 
+    // Paused rows are kept, so a host that pauses as it starts hiding doesn't go blank mid-animation.
     function scheduleRebuild() {
         if (active)
             Qt.callLater(rebuild);
-        else if (rows.length > 0)
-            rows = [];
     }
 
     // Device names only where a type shows more than one device, so a lone GPU reads "GPU".
