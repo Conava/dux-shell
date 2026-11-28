@@ -24,12 +24,13 @@ Item {
     property real radius: Theme.cornerRadiusL
     // Another tile in the same grid row shows extras, so this one keeps their line free to stay level with it.
     property bool reserveExtras: false
+    required property MonitorZoom zoomed
 
-    readonly property real pad: Theme.spacingM
+    readonly property real pad: zoomed.spacingM
     readonly property bool sm: size === "sm"
     readonly property bool wide: !sm
     readonly property bool big: size === "big"
-    readonly property bool tall: big || (solo && height >= MonitorMetrics.wideThreshold)
+    readonly property bool tall: big || (solo && height >= zoomed.wideThreshold)
     readonly property bool compact: sm && !tall
     readonly property bool asleep: row.asleep === true
     readonly property bool missing: row.missing === true
@@ -41,9 +42,9 @@ Item {
     readonly property string shortValueText: missing ? "—" : (main?.shortText ?? valueText)
     readonly property var trend: missing || asleep ? ({}) : (row.trend ?? {})
     readonly property bool hasTrend: (trend.values?.length ?? 0) > 1
-    readonly property real extrasLineHeight: Math.max(Theme.iconSizeSmall, extrasProbe.implicitHeight)
+    readonly property real extrasLineHeight: Math.max(zoomed.iconSizeSmall, extrasProbe.implicitHeight)
     readonly property bool extrasLine: extras.length > 0 || reserveExtras
-    readonly property real valueSize: big ? Theme.fontSizeDisplay : compact && solo ? MonitorMetrics.tileValueSizeCompact : Theme.fontSizeXXLarge
+    readonly property real valueSize: big ? zoomed.fontSizeDisplay : compact && solo ? zoomed.tileValueSizeCompact : zoomed.fontSizeXXLarge
 
     LayoutMirroring.enabled: I18n.isRtl
     LayoutMirroring.childrenInherit: true
@@ -54,7 +55,7 @@ Item {
         id: extrasProbe
         visible: false
         text: "0"
-        font.pixelSize: Theme.fontSizeMedium
+        font.pixelSize: root.zoomed.fontSizeMedium
         font.weight: Theme.fontWeightMedium
     }
 
@@ -63,8 +64,8 @@ Item {
         const font = extrasProbe.font;
         const digit = DCommon.Fonts.widestDigit(font);
         const sample = (v, short) => v?.value === null || v?.value === undefined ? "—" : MonitorMetrics.reserveFor(v.kind ?? "", short, true) || (short ? v.shortText : "") || v.text || "—";
-        const widths = short => values.map(v => Theme.iconSizeSmall + Theme.spacingXXS + Math.ceil(DCommon.Fonts.textWidth(font, sample(v, short).replace(/\d/g, digit))));
-        const total = list => list.reduce((sum, w) => sum + w, 0) + Theme.spacingS * Math.max(0, list.length - 1);
+        const widths = short => values.map(v => root.zoomed.iconSizeSmall + root.zoomed.spacingXXS + Math.ceil(DCommon.Fonts.textWidth(font, sample(v, short).replace(/\d/g, digit))));
+        const total = list => list.reduce((sum, w) => sum + w, 0) + root.zoomed.spacingS * Math.max(0, list.length - 1);
         if (total(widths(false)) <= available)
             return {
                 "count": values.length,
@@ -87,7 +88,7 @@ Item {
         property real available: parent?.width ?? 0
         readonly property var fit: root.fitExtras(values, available)
 
-        spacing: Theme.spacingS
+        spacing: root.zoomed.spacingS
 
         Repeater {
             model: extrasHost.visible ? extrasHost.fit.count : 0
@@ -99,12 +100,12 @@ Item {
                 readonly property var modelData: extrasHost.values[index] ?? ({})
                 readonly property bool flagged: (modelData.level ?? 0) > 0
 
-                spacing: Theme.spacingXXS
+                spacing: root.zoomed.spacingXXS
 
                 DeviceIcon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: extra.modelData.icon ?? ""
-                    size: Theme.iconSizeSmall
+                    size: root.zoomed.iconSizeSmall
                     color: extra.flagged ? MonitorMetrics.levelColor(extra.modelData?.level, root.accentColor) : root.mutedColor
                 }
 
@@ -112,7 +113,7 @@ Item {
                     halo: root.halo
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.missing ? "—" : ((extrasHost.fit.short ? extra.modelData.shortText : undefined) ?? extra.modelData.text ?? "—")
-                    font.pixelSize: Theme.fontSizeMedium
+                    font.pixelSize: root.zoomed.fontSizeMedium
                     font.weight: Theme.fontWeightMedium
                     color: extra.flagged ? MonitorMetrics.levelColor(extra.modelData?.level, root.accentColor) : root.contentColor
                 }
@@ -135,7 +136,7 @@ Item {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             name: root.row.icon ?? ""
-            size: Theme.iconSizeMedium
+            size: root.zoomed.iconSizeMedium
             color: root.levelColor
         }
 
@@ -144,13 +145,13 @@ Item {
 
             halo: root.halo
             anchors.left: glyph.right
-            anchors.leftMargin: Theme.spacingS
+            anchors.leftMargin: root.zoomed.spacingS
             anchors.right: badge.visible ? badge.left : parent.right
-            anchors.rightMargin: badge.visible ? Theme.spacingS : 0
+            anchors.rightMargin: badge.visible ? root.zoomed.spacingS : 0
             anchors.verticalCenter: parent.verticalCenter
             text: root.row.name ?? ""
             Accessible.ignored: true
-            font.pixelSize: Theme.fontSizeMedium
+            font.pixelSize: root.zoomed.fontSizeMedium
             font.weight: Theme.fontWeightMedium
             color: root.contentColor
             horizontalAlignment: Text.AlignLeft
@@ -163,7 +164,7 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             values: parent.badgeValues
-            available: parent.width - glyph.width - Theme.spacingS * 2 - (parent.keepName ? Math.ceil(label.implicitWidth) : 0)
+            available: parent.width - glyph.width - root.zoomed.spacingS * 2 - (parent.keepName ? Math.ceil(label.implicitWidth) : 0)
             visible: parent.showBadge && fit.count > 0
         }
     }
@@ -173,7 +174,7 @@ Item {
         Accessible.ignored: true
         wrapMode: Text.NoWrap
         fontSizeMode: Text.HorizontalFit
-        minimumPixelSize: Theme.fontSizeLarge
+        minimumPixelSize: root.zoomed.fontSizeLarge
         text: root.valueText
         font.pixelSize: root.valueSize
         font.weight: Theme.fontWeightMedium
@@ -201,9 +202,9 @@ Item {
 
         property real fraction: root.fraction
         property color color: root.levelColor
-        property real thickness: MonitorMetrics.meterThickness
+        property real thickness: root.zoomed.meterThickness
 
-        readonly property real gap: fraction > 0 && fraction < 1 ? Theme.spacingXS : 0
+        readonly property real gap: fraction > 0 && fraction < 1 ? root.zoomed.spacingXS : 0
         readonly property real active: width * shown
 
         property real shown: fraction
@@ -236,7 +237,7 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: (parent.height - width) / 2
                 anchors.verticalCenter: parent.verticalCenter
-                width: Theme.spacingXS
+                width: root.zoomed.spacingXS
                 height: width
                 radius: width / 2
                 color: meterBar.color
@@ -247,13 +248,13 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: root.radius
+        radius: root.zoomed.radius(root.radius)
         color: root.tileColor
     }
 
     ClippingRectangle {
         anchors.fill: parent
-        radius: root.radius
+        radius: root.zoomed.radius(root.radius)
         color: "transparent"
 
         Loader {
@@ -285,12 +286,12 @@ Item {
             Row {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
-                spacing: Theme.spacingXS
+                spacing: root.zoomed.spacingXS
 
                 DIcon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "bedtime"
-                    size: Theme.iconSize
+                    size: root.zoomed.iconSize
                     color: root.mutedColor
                 }
 
@@ -299,7 +300,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.valueText
                     Accessible.ignored: true
-                    font.pixelSize: Theme.fontSizeXLarge
+                    font.pixelSize: root.zoomed.fontSizeXLarge
                     font.weight: Theme.fontWeightMedium
                     color: root.mutedColor
                 }
@@ -328,17 +329,17 @@ Item {
                 id: upperExtras
 
                 anchors.left: parent.left
-                y: header.height + Theme.spacingXS
-                visible: root.sm && root.solo && root.extras.length > 0 && (root.tall || y + root.extrasLineHeight + Theme.spacingXS <= value.y)
+                y: header.height + root.zoomed.spacingXS
+                visible: root.sm && root.solo && root.extras.length > 0 && (root.tall || y + root.extrasLineHeight + root.zoomed.spacingXS <= value.y)
             }
 
             MonitorText {
                 halo: root.halo
                 anchors.left: parent.left
                 anchors.right: parent.right
-                y: header.height + Theme.spacingXS
+                y: header.height + root.zoomed.spacingXS
                 text: root.row.detail ?? ""
-                font.pixelSize: Theme.fontSizeSmall
+                font.pixelSize: root.zoomed.fontSizeSmall
                 color: root.mutedColor
                 horizontalAlignment: Text.AlignLeft
                 elide: Text.ElideRight
@@ -356,29 +357,29 @@ Item {
                 id: value
 
                 anchors.left: parent.left
-                y: stack.valueOnTop ? header.height + Theme.spacingXS : parent.height - height
-                width: root.wide ? Math.min(Math.ceil(valueMetrics.advanceWidth), stack.showTrend ? parent.width * (1 - MonitorMetrics.tileTrendRatio) - Theme.spacingM : parent.width) : parent.width
+                y: stack.valueOnTop ? header.height + root.zoomed.spacingXS : parent.height - height
+                width: root.wide ? Math.min(Math.ceil(valueMetrics.advanceWidth), stack.showTrend ? parent.width * (1 - MonitorMetrics.tileTrendRatio) - root.zoomed.spacingM : parent.width) : parent.width
             }
 
             Extras {
                 id: lowerExtras
 
                 anchors.left: parent.left
-                y: value.y + value.height + Theme.spacingXXS
+                y: value.y + value.height + root.zoomed.spacingXXS
                 height: root.extrasLineHeight
                 visible: stack.valueOnTop && root.extrasLine
             }
 
             Trend {
-                readonly property real startY: stack.valueOnTop ? (lowerExtras.visible ? lowerExtras.y + lowerExtras.height : value.y + value.height) + Theme.spacingS : (upperExtras.visible ? upperExtras.y + upperExtras.height : header.height) + Theme.spacingS
+                readonly property real startY: stack.valueOnTop ? (lowerExtras.visible ? lowerExtras.y + lowerExtras.height : value.y + value.height) + root.zoomed.spacingS : (upperExtras.visible ? upperExtras.y + upperExtras.height : header.height) + root.zoomed.spacingS
 
                 visible: stack.showTrend
                 anchors.left: root.wide ? value.right : parent.left
-                anchors.leftMargin: root.wide ? Theme.spacingM : -root.pad
+                anchors.leftMargin: root.wide ? root.zoomed.spacingM : -root.pad
                 anchors.right: parent.right
                 anchors.rightMargin: root.wide ? 0 : -root.pad
                 y: root.wide ? parent.height + root.pad - height : startY
-                height: root.wide ? root.height * MonitorMetrics.tileTrendRatio : Math.max(0, (stack.valueOnTop ? parent.height + root.pad : value.y - Theme.spacingXS) - startY)
+                height: root.wide ? root.height * MonitorMetrics.tileTrendRatio : Math.max(0, (stack.valueOnTop ? parent.height + root.pad : value.y - root.zoomed.spacingXS) - startY)
                 insetBottom: root.wide ? root.pad : Theme.outlineWidthFocused
             }
         }
@@ -392,8 +393,8 @@ Item {
         Item {
             id: meter
 
-            readonly property real room: height - header.height - Theme.spacingS - value.height - mainMeter.height - column.spacing
-            readonly property bool extraMeter: root.wide && root.extras.length > 0 && room >= (extraLabel.height + MonitorMetrics.barThicknessExtra + column.spacing * 2)
+            readonly property real room: height - header.height - root.zoomed.spacingS - value.height - mainMeter.height - column.spacing
+            readonly property bool extraMeter: root.wide && root.extras.length > 0 && room >= (extraLabel.height + root.zoomed.barThicknessExtra + column.spacing * 2)
             readonly property bool extrasLine: root.sm && root.extras.length > 0 && room >= root.extrasLineHeight + column.spacing
 
             Header {
@@ -409,10 +410,10 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: header.bottom
-                anchors.topMargin: Theme.spacingXS
+                anchors.topMargin: root.zoomed.spacingXS
                 anchors.bottom: column.top
-                anchors.bottomMargin: Theme.spacingXS
-                visible: !!root.row.graph && root.hasTrend && height >= Theme.iconSize
+                anchors.bottomMargin: root.zoomed.spacingXS
+                visible: !!root.row.graph && root.hasTrend && height >= root.zoomed.iconSize
             }
 
             Column {
@@ -421,7 +422,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                spacing: Theme.spacingS
+                spacing: root.zoomed.spacingS
 
                 Extras {
                     id: extrasRow
@@ -438,7 +439,7 @@ Item {
                 Meter {
                     id: mainMeter
 
-                    thickness: root.big ? MonitorMetrics.meterThicknessBig : MonitorMetrics.meterThickness
+                    thickness: root.big ? root.zoomed.meterThicknessBig : root.zoomed.meterThickness
                 }
 
                 Item {
@@ -452,9 +453,9 @@ Item {
 
                         anchors.left: parent.left
                         anchors.right: extraValue.left
-                        anchors.rightMargin: Theme.spacingS
+                        anchors.rightMargin: root.zoomed.spacingS
                         text: root.extras[0]?.label ?? ""
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         color: root.mutedColor
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideRight
@@ -466,7 +467,7 @@ Item {
 
                         anchors.right: parent.right
                         text: root.missing ? "—" : (root.extras[0]?.text ?? "—")
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         font.weight: Theme.fontWeightMedium
                         color: root.contentColor
                     }
@@ -476,21 +477,21 @@ Item {
                     visible: meter.extraMeter
                     fraction: root.missing ? 0 : Math.min(Math.max(root.extras[0]?.fraction ?? 0, 0), 1)
                     color: MonitorMetrics.levelColor(root.extras[0]?.level, root.accentColor)
-                    thickness: MonitorMetrics.barThicknessExtra
+                    thickness: root.zoomed.barThicknessExtra
                 }
             }
         }
     }
 
     component Ring: DRingGauge {
-        property real token: MonitorMetrics.ringSizeSmall
+        property real token: root.zoomed.ringSizeSmall
         property real room: token
         readonly property real textWidth: innerSize - strokeWidth * 2
 
         width: Math.min(token, room)
         height: width
         value: root.fraction
-        trackGap: Theme.spacingXS
+        trackGap: root.zoomed.spacingXS
         ringColor: root.levelColor
         trackColor: Theme.withAlpha(root.contentColor, Theme.stateLayerFocus)
         animated: MonitorMetrics.animationsEnabled
@@ -503,7 +504,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.NoWrap
         fontSizeMode: Text.HorizontalFit
-        minimumPixelSize: Theme.fontSizeSmall
+        minimumPixelSize: root.zoomed.fontSizeSmall
         font.weight: Theme.fontWeightMedium
         color: root.contentColor
     }
@@ -514,20 +515,20 @@ Item {
         Item {
             id: ringSmall
 
-            readonly property bool extrasBelow: root.extrasLine && height - MonitorMetrics.ringSizeSmall - name.height - column.spacing * 2 >= root.extrasLineHeight
+            readonly property bool extrasBelow: root.extrasLine && height - root.zoomed.ringSizeSmall - name.height - column.spacing * 2 >= root.extrasLineHeight
 
             Column {
                 id: column
 
                 anchors.centerIn: parent
                 width: parent.width
-                spacing: Theme.spacingXS
+                spacing: root.zoomed.spacingXS
 
                 Ring {
                     id: ring
 
                     anchors.horizontalCenter: parent.horizontalCenter
-                    strokeWidth: MonitorMetrics.ringStrokeSmall
+                    strokeWidth: root.zoomed.ringStrokeSmall
                     room: Math.min(column.width, ringSmall.height - nameRow.height - column.spacing - (extrasRow.visible ? root.extrasLineHeight + column.spacing : 0))
 
                     // Only the value inside a small ring: the name sits right below it.
@@ -535,7 +536,7 @@ Item {
                         anchors.centerIn: parent
                         width: ring.textWidth
                         text: root.shortValueText
-                        font.pixelSize: Theme.fontSizeLarge
+                        font.pixelSize: root.zoomed.fontSizeLarge
                     }
                 }
 
@@ -545,7 +546,7 @@ Item {
 
                     anchors.horizontalCenter: parent.horizontalCenter
                     height: Math.max(name.height, root.extrasLine && !ringSmall.extrasBelow ? root.extrasLineHeight : 0)
-                    spacing: Theme.spacingS
+                    spacing: root.zoomed.spacingS
 
                     MonitorText {
                         id: name
@@ -556,7 +557,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         text: root.row.name ?? ""
                         Accessible.ignored: true
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         font.weight: Theme.fontWeightMedium
                         color: root.mutedColor
                         elide: Text.ElideRight
@@ -593,31 +594,31 @@ Item {
 
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                token: MonitorMetrics.ringSizeWide
+                token: root.zoomed.ringSizeWide
                 room: parent.height
-                strokeWidth: MonitorMetrics.ringStrokeWide
+                strokeWidth: root.zoomed.ringStrokeWide
 
                 RingValue {
                     width: ring.textWidth
                     anchors.centerIn: parent
                     text: root.shortValueText
-                    font.pixelSize: Theme.fontSizeXLarge
+                    font.pixelSize: root.zoomed.fontSizeXLarge
                 }
             }
 
             Column {
                 anchors.left: ring.right
-                anchors.leftMargin: Theme.spacingL
+                anchors.leftMargin: root.zoomed.spacingL
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Theme.spacingXS
+                spacing: root.zoomed.spacingXS
 
                 MonitorText {
                     halo: root.halo
                     width: parent.width
                     text: root.row.name ?? ""
                     Accessible.ignored: true
-                    font.pixelSize: Theme.fontSizeMedium
+                    font.pixelSize: root.zoomed.fontSizeMedium
                     font.weight: Theme.fontWeightMedium
                     color: root.contentColor
                     horizontalAlignment: Text.AlignLeft
@@ -632,7 +633,7 @@ Item {
                     halo: root.halo
                     width: parent.width
                     text: root.main?.label ?? ""
-                    font.pixelSize: Theme.fontSizeSmall
+                    font.pixelSize: root.zoomed.fontSizeSmall
                     color: root.mutedColor
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
@@ -657,9 +658,9 @@ Item {
 
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: header.height + (parent.height - header.height - height) / 2
-                token: MonitorMetrics.ringSizeBig
-                room: Math.min(parent.width, parent.height - header.height - Theme.spacingS * 2)
-                strokeWidth: MonitorMetrics.ringStrokeBig
+                token: root.zoomed.ringSizeBig
+                room: Math.min(parent.width, parent.height - header.height - root.zoomed.spacingS * 2)
+                strokeWidth: root.zoomed.ringStrokeBig
 
                 Column {
                     anchors.centerIn: parent
@@ -669,7 +670,7 @@ Item {
                         width: ring.textWidth
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: root.valueText
-                        font.pixelSize: Theme.fontSizeDisplay
+                        font.pixelSize: root.zoomed.fontSizeDisplay
                     }
 
                     MonitorText {
@@ -678,7 +679,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         horizontalAlignment: Text.AlignHCenter
                         text: root.main?.label ?? ""
-                        font.pixelSize: Theme.fontSizeSmall
+                        font.pixelSize: root.zoomed.fontSizeSmall
                         color: root.mutedColor
                     }
                 }
@@ -705,7 +706,7 @@ Item {
                 id: value
 
                 anchors.left: parent.left
-                y: header.height + Theme.spacingXS
+                y: header.height + root.zoomed.spacingXS
                 width: parent.width
             }
 
@@ -713,13 +714,13 @@ Item {
                 id: extrasRow
 
                 anchors.left: parent.left
-                y: value.y + value.height + Theme.spacingXXS
+                y: value.y + value.height + root.zoomed.spacingXXS
                 height: root.extrasLineHeight
                 visible: root.sm && root.extrasLine
             }
 
             Trend {
-                readonly property real textBottom: (extrasRow.visible ? extrasRow.y + extrasRow.height : value.y + value.height) + Theme.spacingS
+                readonly property real textBottom: (extrasRow.visible ? extrasRow.y + extrasRow.height : value.y + value.height) + root.zoomed.spacingS
 
                 visible: root.hasTrend
                 anchors.left: parent.left

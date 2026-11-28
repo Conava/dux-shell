@@ -21,8 +21,8 @@ Column {
                 "values": ["icon", "meter", "ring", "graph"]
             },
             "barStyle": {
-                "labels": [I18n.tr("Brackets", "system monitor bars style option"), I18n.tr("Tiles", "system monitor layout and style option")],
-                "values": ["brackets", "tiles"]
+                "labels": [I18n.tr("Tiles", "system monitor layout and style option"), I18n.tr("Brackets", "system monitor bars style option")],
+                "values": ["tiles", "brackets"]
             },
             "listStyle": {
                 "labels": [I18n.tr("Rows", "system monitor list style option"), I18n.tr("Tiles", "system monitor layout and style option")],

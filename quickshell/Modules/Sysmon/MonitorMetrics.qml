@@ -45,6 +45,8 @@ Singleton {
     readonly property real bracketOpacity: 0.7
     readonly property real secondaryFillOpacity: 0.7
     readonly property real scaleFloor: 0.35
+    readonly property int scaleSteps: 100
+    readonly property int settlePasses: 8
     // Bars stand upright once their box is this much taller than wide.
     readonly property real verticalBarsRatio: 1.15
 
@@ -93,6 +95,11 @@ Singleton {
 
     function reserveFor(kind, short, extra) {
         return (extra && short ? extraValueSamples[kind] : undefined) ?? (short ? shortValueSamples : valueSamples)[kind] ?? "";
+    }
+
+    function shownEntries(row) {
+        const values = row?.values ?? [];
+        return row?.asleep ? values.slice(0, 1) : values;
     }
 
     function levelColor(level, accent) {

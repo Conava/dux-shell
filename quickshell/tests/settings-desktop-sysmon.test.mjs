@@ -57,9 +57,9 @@ test("the old Tiles background reads as the Tiles style", () => {
         return [c.background, c.barStyle, c.listStyle, c.textShadow];
     };
     assert.deepEqual(pick({ layout: "bars", background: "tiles" }), ["none", "tiles", "rows", false]);
-    assert.deepEqual(pick({ layout: "list", background: "tiles", textShadow: true }), ["none", "brackets", "tiles", false]);
-    assert.deepEqual(pick({ background: "tiles" }), ["none", "brackets", "rows", false]);
-    assert.deepEqual(pick({ layout: "graphs", background: "tiles" }), ["card", "brackets", "rows", false]);
+    assert.deepEqual(pick({ layout: "list", background: "tiles", textShadow: true }), ["none", "tiles", "tiles", false]);
+    assert.deepEqual(pick({ background: "tiles" }), ["none", "tiles", "rows", false]);
+    assert.deepEqual(pick({ layout: "graphs", background: "tiles" }), ["card", "tiles", "rows", false]);
 });
 
 test("opacity counts only when a card or tiles are painted", () => {
@@ -70,7 +70,7 @@ test("opacity counts only when a card or tiles are painted", () => {
     assert.equal(uses({ layout: "bars", barStyle: "tiles", background: "none" }), true);
     assert.equal(uses({ layout: "list", listStyle: "tiles", background: "none" }), true);
     for (const layout of ["bars", "list", "graphs"])
-        assert.equal(uses({ layout, background: "none" }), false);
+        assert.equal(uses({ layout, barStyle: "brackets", background: "none" }), false);
 });
 
 const dash = (cards, dashOptions) => store.migrateToVersion({ configVersion: 47, dashCards: cards, dashOptions }, 48);

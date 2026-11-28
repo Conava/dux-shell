@@ -418,11 +418,6 @@ BasePill {
 
     content: Component {
         Item {
-            id: contentRoot
-
-            // itemAt() is not observable, so the bounds binding re-runs when delegates come or go.
-            property int itemsRevision: 0
-
             implicitWidth: root.isVerticalOrientation ? root.contentThickness : layout.implicitWidth
             implicitHeight: root.isVerticalOrientation ? layout.implicitHeight : root.contentThickness
 
@@ -430,7 +425,7 @@ BasePill {
                 target: root
                 property: "bounds"
                 value: {
-                    const count = contentRoot.itemsRevision > 0 ? groupRepeater.count : 0;
+                    const count = groupRepeater.revision > 0 ? groupRepeater.count : 0;
                     const items = [];
                     for (let i = 0; i < count; i++)
                         items.push(groupRepeater.itemAt(i));
@@ -446,11 +441,9 @@ BasePill {
                 horizontalItemAlignment: Grid.AlignHCenter
                 verticalItemAlignment: Grid.AlignVCenter
 
-                Repeater {
+                MonitorRepeater {
                     id: groupRepeater
                     model: root.groups.length
-                    onItemAdded: contentRoot.itemsRevision++
-                    onItemRemoved: contentRoot.itemsRevision++
 
                     Grid {
                         id: group
