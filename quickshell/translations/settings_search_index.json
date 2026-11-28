@@ -12218,6 +12218,14 @@
     "optionFile": "AppsDockOptions.qml"
   },
   {
+    "section": "barWidgetOption:BatteryOptions.qml:14",
+    "label": "Compact",
+    "tabIndex": 22,
+    "keywords": [],
+    "runtimeType": "barWidgetOption",
+    "optionFile": "BatteryOptions.qml"
+  },
+  {
     "section": "barWidgetOption:WorkspaceSwitcherOptions.qml:3",
     "label": "Compact",
     "tabIndex": 22,
@@ -12648,14 +12656,6 @@
     "keywords": [],
     "runtimeType": "barWidgetOption",
     "optionFile": "ControlCenterOptions.qml"
-  },
-  {
-    "section": "barWidgetOption:BatteryOptions.qml:14",
-    "label": "Interface density",
-    "tabIndex": 22,
-    "keywords": [],
-    "runtimeType": "barWidgetOption",
-    "optionFile": "BatteryOptions.qml"
   },
   {
     "section": "islandHomeLayout",

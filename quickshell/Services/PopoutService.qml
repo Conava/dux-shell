@@ -623,10 +623,11 @@ Singleton {
     }
 
     // Without that widget in any bar there are no options to open, so land on the page that adds one.
-    function openBarWidgetSettings(widgetId, barId) {
+    // The origin (a widget registration context) picks the clicked instance when a surface holds several.
+    function openBarWidgetSettings(widgetId, barId, origin) {
         const dock = SettingsData.getDockConfig(barId);
         if (dock) {
-            const item = dock.widgets.find(entry => entry.widgetId === widgetId);
+            const item = dock.widgets.find(entry => entry.widgetId === widgetId && entry.id === origin?.occurrenceId) ?? dock.widgets.find(entry => entry.widgetId === widgetId);
             if (!item) {
                 openSettingsWithTab("dock_widgets");
                 return;
@@ -641,7 +642,15 @@ Singleton {
             openSettingsWithTab("bar_widget");
             return;
         }
-        const where = SettingsData.locateBarWidget(widgetId, barId);
+        const slotted = origin?.barId === barId && !origin.surface?.islandController;
+        const list = slotted ? SettingsData.barSectionWidgets(SettingsData.getBarConfig(barId), origin.section) : [];
+        const entry = list[origin?.occurrenceOrder];
+        const exact = entry && (typeof entry === "string" ? entry : entry.id) === widgetId;
+        const where = exact ? {
+            "barId": barId,
+            "section": origin.section,
+            "index": origin.occurrenceOrder
+        } : SettingsData.locateBarWidget(widgetId, barId);
         if (!where) {
             openSettingsWithTab("dankbar_widgets");
             return;

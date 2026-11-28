@@ -4,41 +4,38 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    // The setting picks the variant (spacious or compact), the shell density the tier inside it.
-    readonly property bool compact: SettingsData.batteryPopoutDensity === "compact"
-    readonly property int level: Theme.densityLevel >= 0 ? (compact ? -1 : 1) : (compact ? -2 : 0)
+    // The setting picks the style; the shell density only scales its sizes.
+    readonly property bool compact: SettingsData.batteryPopoutCompact
+    readonly property real shellOffset: [0.75, 0.5, 0, -0.5][1 - Math.max(-2, Math.min(1, Theme.densityLevel))]
+    readonly property real level: (compact ? -0.5 : 0) + shellOffset
     readonly property string colorMode: SettingsData.batteryPopoutColor
     readonly property int tileColumns: 2
     readonly property int deviceTileColumns: 3
-    readonly property real stepXS: level * Theme.spacingXXS
-    readonly property real stepS: level * Theme.spacingXS
-    readonly property real stepM: level * Theme.spacingS
-
-    readonly property bool dense: level < -1
-    readonly property real spaciousStep: Math.max(0, level) * Theme.spacingXL
+    readonly property real stepXS: Math.round(level * Theme.spacingXXS)
+    readonly property real stepS: Math.round(level * Theme.spacingXS)
+    readonly property real stepM: Math.round(level * Theme.spacingS)
 
     readonly property real pad: Theme.spacingL + stepS
-    readonly property real gap: dense ? Theme.spacingXS : Theme.spacingS + Theme.spacingXXS + stepXS
+    readonly property real gap: Theme.spacingS + Theme.spacingXXS + stepXS
     readonly property real sectionGap: Math.max(Theme.spacingS, Theme.spacingM + stepS)
-    readonly property real labelTop: Theme.spacingXL + stepM
     readonly property real labelGap: Theme.spacingS + stepXS
     readonly property real warningPaddingH: Theme.spacingL + Theme.spacingXS + stepS
     readonly property real warningPaddingV: Theme.spacingL + stepS
     readonly property real warningMinHeight: Theme.listItemTwoLineHeight + stepM
     readonly property real tile: Theme.spacingM + stepS
-    readonly property real button: level > 0 ? Theme.minimumTouchTargetSize : dense ? Theme.buttonHeightXS : Theme.iconButtonSize
+    readonly property real button: Theme.iconButtonSize + Math.round(shellOffset * Theme.spacingS)
     readonly property real powerButton: Theme.buttonHeightM + stepM
-    readonly property real row: dense ? Theme.buttonHeightS : Theme.buttonHeightM - Theme.spacingXS + stepS
-    readonly property real chip: level > 0 ? Theme.buttonHeightXS + Theme.spacingXS : dense ? Theme.buttonHeightXXS : Theme.buttonHeightXS
+    readonly property real row: Theme.buttonHeightM - Theme.spacingXS + stepS
+    readonly property real chip: Theme.buttonHeightXS + Math.round(shellOffset * Theme.spacingXS)
     readonly property real compactRing: Theme.buttonHeightXS + Theme.spacingM
     readonly property real compactGlyph: Theme.iconSizeSmall + Theme.spacingXXS
     readonly property real boltCircle: Theme.iconSizeSmall + Theme.spacingS
     readonly property real compactIconSize: Theme.iconSizeSmall + Theme.spacingXS
 
     readonly property real heroSmall: Theme.buttonHeightM + Theme.spacingL
-    readonly property real heroRing: 184 + spaciousStep
+    readonly property real heroRing: 184 + Math.round(shellOffset * Theme.spacingXL)
     readonly property real heroRingBeside: heroRing - Theme.iconButtonSize
-    readonly property real cardFill: compact ? heroSmall : 136 + level * Theme.spacingXL
+    readonly property real cardFill: compact ? heroSmall : 136 + Math.round(shellOffset * Theme.spacingXL)
     readonly property real smallNumberSize: Theme.fontSizeDisplay
 
     readonly property real gaugeStroke: Theme.spacingXS

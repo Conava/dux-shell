@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Shapes
-import Quickshell.Widgets
 import qs.Common
 import qs.Services
 import qs.DCommon.Common
@@ -355,25 +354,35 @@ Item {
         border.color: root.fillColor
     }
 
-    ClippingRectangle {
+    Item {
         id: interior
 
-        x: frame.x + root.strokeWidth
-        y: frame.y + root.strokeWidth
-        width: frame.width - root.strokeWidth * 2
-        height: frame.height - root.strokeWidth * 2
-        radius: Math.max(0, frame.radius - root.strokeWidth)
-        visible: !root.circular
-        color: "transparent"
+        readonly property real cornerRadius: Math.max(0, frame.radius - root.strokeWidth)
 
-        Rectangle {
+        x: Math.ceil(frame.x + root.strokeWidth)
+        y: Math.ceil(frame.y + root.strokeWidth)
+        width: Math.floor(frame.x + frame.width - root.strokeWidth) - x
+        height: Math.floor(frame.y + frame.height - root.strokeWidth) - y
+        visible: !root.circular
+
+        // A scissor clip over a full-size rounded rectangle keeps the leading end rounded without an offscreen pass.
+        Item {
             id: fill
 
             x: 0
             y: root.vertical ? parent.height - height : 0
             width: root.vertical ? parent.width : Math.round(parent.width * root.level / 100)
             height: root.vertical ? Math.round(parent.height * root.level / 100) : parent.height
-            color: root.outlined ? Theme.withAlpha(root.fillColor, 0.32) : root.fillColor
+            clip: true
+
+            Rectangle {
+                x: -fill.x
+                y: -fill.y
+                width: interior.width
+                height: interior.height
+                radius: interior.cornerRadius
+                color: root.outlined ? Theme.withAlpha(root.fillColor, 0.32) : root.fillColor
+            }
 
             Behavior on width {
                 enabled: !root.vertical

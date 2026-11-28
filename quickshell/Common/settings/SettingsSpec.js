@@ -43,7 +43,6 @@ var BATTERY_POPOUT_LAYOUTS = ["grid", "compact", "chips", "list"];
 var BATTERY_POPOUT_DEVICE_LAYOUTS = ["grid", "compact", "chips", "list", "bars"];
 var BATTERY_COLORS = ["primary", "theme", "lowcharging", "level"];
 var BATTERY_POPOUT_STYLES = ["line", "ring", "card"];
-var BATTERY_POPOUT_DENSITIES = ["spacious", "compact"];
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
 
 var LOCAL_SPEC = {
@@ -1354,9 +1353,8 @@ var LOCAL_SPEC = {
         def: "ring",
         coerce: oneOf(BATTERY_POPOUT_STYLES)
     },
-    batteryPopoutDensity: {
-        def: "spacious",
-        coerce: oneOf(BATTERY_POPOUT_DENSITIES)
+    batteryPopoutCompact: {
+        def: false
     },
     batteryPopoutBattery: {
         def: true

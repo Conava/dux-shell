@@ -225,14 +225,12 @@ Column {
             onValueSelected: value => SettingsData.set("batteryPopoutColor", value)
         }
 
-        SettingsButtonGroupRow {
-            settingKey: "batteryPopoutDensity"
-            tags: ["battery", "popout", "density", "spacious", "compact", "spacing", "size"]
-            text: I18n.tr("Interface density", "interface density setting label")
-            model: [I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Compact", "interface density option fitting the most items on screen")]
-            values: Spec.BATTERY_POPOUT_DENSITIES
-            value: SettingsData.batteryPopoutDensity
-            onValueSelected: value => SettingsData.set("batteryPopoutDensity", value)
+        SettingsToggleRow {
+            settingKey: "batteryPopoutCompact"
+            tags: ["battery", "popout", "compact", "density", "spacious", "spacing", "size"]
+            text: I18n.tr("Compact", "battery settings: switch for the more compact popout look")
+            checked: SettingsData.batteryPopoutCompact
+            onToggled: checked => SettingsData.set("batteryPopoutCompact", checked)
         }
     }
 

@@ -15,6 +15,7 @@ Item {
     property bool active: false
     property bool showEdit: true
     property string barId: ""
+    property var origin: null
     property bool batteryRefHeld: false
     property bool temperatureRefHeld: false
     property real contentPadding: BatteryPopoutMetrics.pad
@@ -206,7 +207,7 @@ Item {
     }
 
     function openWidgetSettings() {
-        PopoutService.openBarWidgetSettings("battery", root.barId);
+        PopoutService.openBarWidgetSettings("battery", root.barId, root.origin);
         dismissRequested();
     }
 
@@ -483,22 +484,10 @@ Item {
                 }
             }
 
-            Column {
+            BatteryDeviceList {
                 width: parent.width
                 visible: root.showDevices
-                spacing: BatteryPopoutMetrics.labelGap
-
-                SectionLabel {
-                    visible: root.plainHero
-                    topPadding: BatteryPopoutMetrics.labelTop - BatteryPopoutMetrics.sectionGap
-                    text: I18n.tr("Devices")
-                }
-
-                BatteryDeviceList {
-                    width: parent.width
-                    visible: root.showDevices
-                    devices: root.listedDevices
-                }
+                devices: root.listedDevices
             }
 
             StyledText {

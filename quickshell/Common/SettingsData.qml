@@ -853,7 +853,7 @@ Singleton {
     property int batteryCriticalNotificationType: Spec.SPEC.batteryCriticalNotificationType.def
     property string batteryPopoutColor: Spec.SPEC.batteryPopoutColor.def
     property string batteryPopoutStyle: Spec.SPEC.batteryPopoutStyle.def
-    property string batteryPopoutDensity: Spec.SPEC.batteryPopoutDensity.def
+    property bool batteryPopoutCompact: Spec.SPEC.batteryPopoutCompact.def
     property bool batteryPopoutBattery: Spec.SPEC.batteryPopoutBattery.def
     property bool batteryPopoutStats: Spec.SPEC.batteryPopoutStats.def
     property string batteryPopoutDetailsLayout: Spec.SPEC.batteryPopoutDetailsLayout.def

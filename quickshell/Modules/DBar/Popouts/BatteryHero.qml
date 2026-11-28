@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Widgets
 import qs.Common
 import qs.Services
 import qs.Widgets
@@ -576,7 +575,8 @@ Item {
                 width: parent.width
                 spacing: BatteryPopoutMetrics.gap
 
-                ClippingRectangle {
+                // Clipped on screen: an offscreen clip pass resamples the text at fractional scales.
+                Rectangle {
                     id: cardTrack
 
                     readonly property real limitX: width * root.limit / 100
@@ -612,28 +612,45 @@ Item {
                         DColorAnim {}
                     }
 
-                    Rectangle {
+                    Item {
                         id: fill
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
                         width: parent.width * root.shownValue / 100
-                        color: root.accent
+                        clip: true
 
-                        Behavior on color {
-                            enabled: !Theme.reduceMotion
-                            DColorAnim {}
+                        Rectangle {
+                            x: -fill.x
+                            width: cardTrack.width
+                            height: parent.height
+                            radius: cardTrack.radius
+                            color: root.accent
+
+                            Behavior on color {
+                                enabled: !Theme.reduceMotion
+                                DColorAnim {}
+                            }
                         }
                     }
 
-                    Rectangle {
+                    Item {
+                        id: pastLimitShade
                         visible: root.limited
                         anchors.left: parent.left
                         anchors.leftMargin: cardTrack.limitX
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
-                        color: Theme.withAlpha(Theme.scrimColor, BatteryPopoutMetrics.pastLimitShade)
+                        clip: true
+
+                        Rectangle {
+                            x: -pastLimitShade.x
+                            width: cardTrack.width
+                            height: parent.height
+                            radius: cardTrack.radius
+                            color: Theme.withAlpha(Theme.scrimColor, BatteryPopoutMetrics.pastLimitShade)
+                        }
                     }
 
                     FillFace {
