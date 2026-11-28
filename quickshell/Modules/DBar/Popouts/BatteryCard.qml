@@ -2,8 +2,8 @@ import qs.Common
 import qs.DCommon.Widgets
 
 DCard {
-    // Unframed, the card draws no surface and its content sits inside a card drawn around it
-    property bool framed: true
+    // Only the outer card draws a surface; cards inside it are unframed.
+    property bool framed: false
 
     pad: framed ? BatteryPopoutMetrics.pad : 0
     color: framed ? surfaceColor : "transparent"

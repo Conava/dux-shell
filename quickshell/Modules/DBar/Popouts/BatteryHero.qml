@@ -72,7 +72,6 @@ Item {
     }
 
     component HeroCard: BatteryCard {
-        framed: false
         restRadius: Theme.cornerRadiusL
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius

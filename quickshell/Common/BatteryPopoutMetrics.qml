@@ -7,7 +7,7 @@ Singleton {
     // The setting picks the variant (spacious or compact), the shell density the tier inside it.
     readonly property bool compact: SettingsData.batteryPopoutDensity === "compact"
     readonly property int level: Theme.densityLevel >= 0 ? (compact ? -1 : 1) : (compact ? -2 : 0)
-    readonly property string colorMode: SettingsData.batteryPopoutColor === "primary" ? "primarycharging" : SettingsData.batteryPopoutColor
+    readonly property string colorMode: SettingsData.batteryPopoutColor
     readonly property int tileColumns: 2
     readonly property int deviceTileColumns: 3
     readonly property real stepXS: level * Theme.spacingXXS

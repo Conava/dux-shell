@@ -15,7 +15,7 @@ Card {
     readonly property bool tall: height >= DashMetrics.gridRowUnit * 2
     readonly property string levelText: Math.round(BatteryService.displayBatteryLevel) + "%"
     readonly property string meterStyle: options.style ?? "solid"
-    readonly property string colorMode: options.color !== "theme" ? "level" : "primary"
+    readonly property string colorMode: options.color !== "theme" ? "level" : "accent"
     readonly property string healthText: options.health === true && BatteryService.batteryHealth.endsWith("%") ? I18n.tr("Health %1", "battery health, %1 is a percentage").arg(BatteryService.batteryHealth) : ""
 
     entryId: "battery"

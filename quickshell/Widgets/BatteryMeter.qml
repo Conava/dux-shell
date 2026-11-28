@@ -18,8 +18,8 @@ Item {
     property bool showNumber: true
     property bool showBolt: true
     property string meterStyle: "solid"
-    // A bar battery color mode ("primarycharging", "theme", "lowcharging", "level"), or "primary": the accent, red when low.
-    property string colorMode: "primary"
+    // A bar battery color mode ("primary", "theme", "lowcharging", "level"), or "accent": the accent, red when low.
+    property string colorMode: "accent"
     property color neutralColor: Theme.isLightColor(Theme.primary) === Theme.isLightColor(Theme.surface) ? Theme.surfaceText : Theme.primary
     property real maxDiameter: 0
     // Longest side the solid body may take; the thickness shrinks to fit.
@@ -58,7 +58,7 @@ Item {
             return root.colorOverride;
         if (!BatteryService.batteryAvailable)
             return Theme.onSurface_38;
-        if (root.colorMode === "primary")
+        if (root.colorMode === "accent")
             return root.lowState ? Theme.error : root.neutralColor;
         return BatteryService.colorFor(root.colorMode, BatteryService.batteryLevel, root.charging, root.neutralColor, BatteryService.isPluggedIn);
     }

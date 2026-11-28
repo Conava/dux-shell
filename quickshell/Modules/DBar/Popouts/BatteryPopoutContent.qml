@@ -327,6 +327,7 @@ Item {
             BatteryCard {
                 id: stack
 
+                framed: true
                 width: parent.width
                 height: stackColumn.implicitHeight + pad * 2
                 visible: root.hasHero || root.showGroup
@@ -352,10 +353,9 @@ Item {
                     }
 
                     SectionLabel {
-                        visible: !root.hasHero && root.showGroup && (root.showBattery || SettingsData.batteryPopoutPowerStyle !== "slider")
-                        topPadding: root.hasHero ? BatteryPopoutMetrics.labelTop - Theme.groupedListGap : 0
+                        visible: !root.hasHero && root.showGroup && SettingsData.batteryPopoutPowerStyle !== "slider"
                         bottomPadding: BatteryPopoutMetrics.labelGap - Theme.groupedListGap
-                        text: root.showBattery ? I18n.tr("Battery") : I18n.tr("Power profile")
+                        text: I18n.tr("Power profile")
                     }
 
                     Column {
@@ -366,7 +366,6 @@ Item {
 
                         BatteryPowerProfile {
                             visible: root.showPower
-                            framed: false
                             showHeading: SettingsData.batteryPopoutPowerStyle === "slider"
                             active: root.active
                             topLeftRadius: root.heroCard ? Theme.groupedListInnerRadius : Theme.groupedListOuterRadius

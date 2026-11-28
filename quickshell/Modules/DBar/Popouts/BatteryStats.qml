@@ -192,7 +192,6 @@ Item {
     }
 
     component FrameCard: BatteryCard {
-        framed: false
         restRadius: Theme.groupedListInnerRadius
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius
@@ -298,7 +297,6 @@ Item {
         property bool bad: false
         property var radii
 
-        framed: false
         pad: 0
         height: Math.max(BatteryPopoutMetrics.row, rowContent.implicitHeight + Theme.spacingXS * 2)
         restRadius: Theme.groupedListInnerRadius

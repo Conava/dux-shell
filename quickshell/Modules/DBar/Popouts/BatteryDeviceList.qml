@@ -46,7 +46,7 @@ Item {
     }
 
     function valueColor(device) {
-        return device.low && (root.colorMode === "primarycharging" || root.colorMode === "lowcharging") ? Theme.error : Theme.surfaceText;
+        return device.low && (root.colorMode === "primary" || root.colorMode === "lowcharging") ? Theme.error : Theme.surfaceText;
     }
 
     function level(device) {

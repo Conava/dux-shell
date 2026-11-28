@@ -624,6 +624,23 @@ Singleton {
 
     // Without that widget in any bar there are no options to open, so land on the page that adds one.
     function openBarWidgetSettings(widgetId, barId) {
+        const dock = SettingsData.getDockConfig(barId);
+        if (dock) {
+            const item = dock.widgets.find(entry => entry.widgetId === widgetId);
+            if (!item) {
+                openSettingsWithTab("dock_widgets");
+                return;
+            }
+            const widget = BarWidgetCatalog.get(widgetId);
+            SettingsUiState.dockHubSelection = dock.id;
+            SettingsUiState.selectedDockId = dock.id;
+            SettingsUiState.selectedDockWidgetId = item.id;
+            SettingsUiState.selectedWidgetTitle = widget?.text ?? widgetId;
+            SettingsUiState.selectedWidgetDescription = widget?.description ?? "";
+            SettingsUiState.selectedWidgetIcon = widget?.icon ?? "widgets";
+            openSettingsWithTab("bar_widget");
+            return;
+        }
         const where = SettingsData.locateBarWidget(widgetId, barId);
         if (!where) {
             openSettingsWithTab("dankbar_widgets");

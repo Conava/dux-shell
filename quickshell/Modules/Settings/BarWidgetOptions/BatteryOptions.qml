@@ -96,8 +96,8 @@ Column {
             visible: (BatteryService.batteryAvailable || BatteryService.hasPeripherals) && !(root.page?.dockHosted ?? false)
             resetStore: root.barStore
             resetKeys: ["batteryColorMode"]
-            model: [I18n.tr("Primary", "battery settings: popout color option, accent color"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
-            values: Spec.BATTERY_BAR_COLORS
+            model: [I18n.tr("Primary", "battery settings: color option, accent color, red when low, green while charging"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
+            values: Spec.BATTERY_COLORS
             value: root.barConfig?.batteryColorMode ?? SettingsData.barConfigDefault("batteryColorMode")
             fallbackValue: SettingsData.barConfigDefault("batteryColorMode")
             onValueSelected: selected => SettingsData.updateBarConfig(root.page.barId, {
@@ -219,8 +219,8 @@ Column {
             settingKey: "batteryPopoutColor"
             tags: ["battery", "popout", "color", "primary", "theme", "low", "charging", "level"]
             text: I18n.tr("Color", "battery settings: color of the battery popout")
-            model: [I18n.tr("Primary", "battery settings: popout color option, accent color"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
-            values: Spec.BATTERY_POPOUT_COLORS
+            model: [I18n.tr("Primary", "battery settings: color option, accent color, red when low, green while charging"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
+            values: Spec.BATTERY_COLORS
             value: SettingsData.batteryPopoutColor
             onValueSelected: value => SettingsData.set("batteryPopoutColor", value)
         }

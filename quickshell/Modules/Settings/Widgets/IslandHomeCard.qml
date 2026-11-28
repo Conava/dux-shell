@@ -145,8 +145,8 @@ SettingsCard {
         resetKeys: ["batteryColorMode"]
         text: I18n.tr("Color")
         visible: root.batteryShown && !root.hosted
-        model: [I18n.tr("Primary", "battery settings: popout color option, accent color"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
-        values: Spec.BATTERY_BAR_COLORS
+        model: [I18n.tr("Primary", "battery settings: color option, accent color, red when low, green while charging"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
+        values: Spec.BATTERY_COLORS
         value: root.store.config?.batteryColorMode ?? SettingsData.barConfigDefault("batteryColorMode")
         fallbackValue: SettingsData.barConfigDefault("batteryColorMode")
         onValueSelected: selected => root.store.apply("batteryColorMode", selected)

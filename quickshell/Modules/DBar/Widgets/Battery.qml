@@ -30,7 +30,7 @@ BasePill {
     readonly property bool showTimeOnlyOnBattery: SettingsData.widgetOption("battery", widgetData, "showBatteryTimeOnlyOnBattery")
     readonly property string batteryStyle: SettingsData.widgetOption("battery", widgetData, "batteryStyle")
     readonly property bool pillStyle: battery.batteryStyle !== "icon"
-    readonly property string colorMode: BatteryService.barColorMode(barConfig?.batteryColorMode ?? SettingsData.barConfigDefault("batteryColorMode"))
+    readonly property string colorMode: barConfig?.batteryColorMode ?? SettingsData.barConfigDefault("batteryColorMode")
     readonly property string batteryDirection: SettingsData.widgetOption("battery", widgetData, "batteryDirection")
     readonly property string batterySeparator: SettingsData.widgetOption("battery", widgetData, "batterySeparator")
     readonly property var batteryDevices: SettingsData.widgetOption("battery", widgetData, "batteryDevices")
@@ -241,7 +241,7 @@ BasePill {
                                 return "–";
                             return battery.isVerticalOrientation ? String(modelData.percentage) : `${modelData.percentage}%`;
                         }
-                        readonly property color textColor: isSystem && battery.critical ? battery.contentColor : ((battery.colorMode === "primarycharging" || battery.colorMode === "lowcharging") && modelData.low ? Theme.error : battery.contentColor)
+                        readonly property color textColor: isSystem && battery.critical ? battery.contentColor : ((battery.colorMode === "primary" || battery.colorMode === "lowcharging") && modelData.low ? Theme.error : battery.contentColor)
                         readonly property string shownText: {
                             if (!isSystem)
                                 return deviceText;

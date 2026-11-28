@@ -34,14 +34,6 @@ function oneOf(values) {
     return v => values.indexOf(v) >= 0 ? v : undefined;
 }
 
-function batteryPopoutStyle(v) {
-    return oneOf(BATTERY_POPOUT_STYLES)(v === "compact" ? "line" : v);
-}
-
-function batteryPopoutColor(v) {
-    return oneOf(BATTERY_POPOUT_COLORS)(v);
-}
-
 function subsetOf(values) {
     return v => Array.isArray(v) ? v.filter(x => values.indexOf(x) >= 0) : undefined;
 }
@@ -49,8 +41,7 @@ function subsetOf(values) {
 var BATTERY_POPOUT_DETAILS = ["health", "temperature", "capacity", "power"];
 var BATTERY_POPOUT_LAYOUTS = ["grid", "compact", "chips", "list"];
 var BATTERY_POPOUT_DEVICE_LAYOUTS = ["grid", "compact", "chips", "list", "bars"];
-var BATTERY_BAR_COLORS = ["primary", "theme", "lowcharging", "level"];
-var BATTERY_POPOUT_COLORS = ["primary", "theme", "lowcharging", "level"];
+var BATTERY_COLORS = ["primary", "theme", "lowcharging", "level"];
 var BATTERY_POPOUT_STYLES = ["line", "ring", "card"];
 var BATTERY_POPOUT_DENSITIES = ["spacious", "compact"];
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
@@ -1357,11 +1348,11 @@ var LOCAL_SPEC = {
     },
     batteryPopoutColor: {
         def: "primary",
-        coerce: batteryPopoutColor
+        coerce: oneOf(BATTERY_COLORS)
     },
     batteryPopoutStyle: {
         def: "ring",
-        coerce: batteryPopoutStyle
+        coerce: oneOf(BATTERY_POPOUT_STYLES)
     },
     batteryPopoutDensity: {
         def: "spacious",

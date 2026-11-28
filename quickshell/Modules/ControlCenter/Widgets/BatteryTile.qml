@@ -12,7 +12,7 @@ CcTile {
     readonly property bool available: BatteryService.batteryAvailable
     readonly property bool profileMode: !available && !BatteryService.hasPeripherals && PowerProfileWatcher.available
     readonly property string meterStyle: widgetData?.batteryStyle ?? "icon"
-    readonly property string colorMode: (widgetData?.batteryColorMode ?? "level") === "level" ? "level" : "primary"
+    readonly property string colorMode: (widgetData?.batteryColorMode ?? "level") === "level" ? "level" : "accent"
     readonly property bool showsMeter: available && meterStyle !== "icon"
     property real meterWidth: 0
 
