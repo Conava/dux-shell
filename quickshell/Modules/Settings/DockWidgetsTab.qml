@@ -184,7 +184,7 @@ Item {
                         iconName: root.widgetIcon(modelData.widgetId)
                         subtitle: removeButton.confirming ? I18n.tr("Confirm Delete", "delete button confirmation text") : (info?.description ?? "")
                         subtitleColor: removeButton.confirming ? Theme.error : Theme.surfaceVariantText
-                        readonly property bool expanded: root.expandedSpacers[modelData.id] === true
+                        expanded: root.expandedSpacers[modelData.id] === true
                         clickable: modelData.widgetId === "spacer"
                         Accessible.checkable: clickable
                         Accessible.checked: expanded
