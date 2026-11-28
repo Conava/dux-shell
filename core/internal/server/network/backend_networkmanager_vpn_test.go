@@ -307,3 +307,34 @@ func TestMarkSecretsNotSaved(t *testing.T) {
 	assert.Equal(t, map[string]string{"IPSec secret-flags": "1", "Xauth password-flags": "2", "group-flags": "2"}, data)
 	assert.False(t, markSecretsNotSaved(data, map[string]string{"Xauth password": "x"}, nil))
 }
+
+func TestCancelledBrowserLoginIsNotAFailure(t *testing.T) {
+	mockNM := mock_gonetworkmanager.NewMockNetworkManager(t)
+	mockNM.EXPECT().GetPropertyActiveConnections().Return(nil, nil)
+	backend, err := NewNetworkManagerBackend(mockNM)
+	assert.NoError(t, err)
+	backend.state.IsConnectingVPN = true
+	backend.state.ConnectingVPNUUID = "a"
+
+	const path = dbus.ObjectPath("/org/freedesktop/NetworkManager/Settings/1")
+	started := make(chan struct{})
+	errs := make(chan error, 1)
+	go func() {
+		_, err := backend.runBrowserLogin(t.Context(), browserLoginOwner{UUID: "a", ConnectionPath: path, FromAgent: true},
+			func(ctx context.Context) (*openConnectAuthResult, error) {
+				close(started)
+				<-ctx.Done()
+				return &openConnectAuthResult{pendingSave: &pendingVPNCredentials{ConnectionPath: string(path)}}, nil
+			})
+		errs <- err
+	}()
+	<-started
+
+	assert.NotNil(t, backend.cancelBrowserLoginFor("a"))
+	assert.ErrorIs(t, <-errs, errVPNBrowserLoginCancelled)
+	backend.handleVPNStateChange(nmVPNStateFailed, 0)
+
+	assert.Empty(t, backend.state.VPNError)
+	assert.False(t, backend.state.IsConnectingVPN)
+	assert.Nil(t, backend.pendingVPNSave)
+}

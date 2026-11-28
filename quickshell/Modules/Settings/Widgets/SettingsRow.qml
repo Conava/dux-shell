@@ -307,10 +307,11 @@ T.Control {
                 Loader {
                     anchors.verticalCenter: parent.verticalCenter
                     active: root.iconName !== ""
+                    // Sized here: a Loader keeps its last item's width after unloading.
+                    width: active ? (root.iconBox ? SettingsMetrics.heroLeadingSize : Theme.iconSize) : 0
+                    height: width
 
                     sourceComponent: Rectangle {
-                        width: root.iconBox ? SettingsMetrics.heroLeadingSize : Theme.iconSize
-                        height: width
                         radius: Theme.fullRadius(width, height)
                         color: root.iconBox ? Theme.withAlpha(root.iconColor, Theme.tonalTintAlpha) : "transparent"
 

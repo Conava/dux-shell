@@ -45,7 +45,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-const APIVersion = 45
+const APIVersion = 46
 
 var CLIVersion = "dev"
 
@@ -650,6 +650,12 @@ func handleSubscribe(ctx context.Context, conn *ipc.ConnWriter, req ipc.Request)
 		forwardSubscription(&wg, eventChan, stopChan, "network.credentials", prompts, func() {
 			mgr.UnsubscribeCredentials(id, prompts)
 		}, nil)
+
+		closedID := clientID + "-credentials-closed"
+		closed := mgr.SubscribeCredentialsClosed(closedID)
+		forwardSubscription(&wg, eventChan, stopChan, "network.credentials.closed", closed, func() {
+			mgr.UnsubscribeCredentialsClosed(closedID, closed)
+		}, nil)
 	}
 
 	if shouldSubscribe("loginctl") && loginctlManager != nil {
@@ -1110,7 +1116,7 @@ func (s *Server) Serve(printDocs bool) error {
 		log.Info(" network.vpn.profiles        - List VPN profiles")
 		log.Info(" network.vpn.active          - List active VPN connections")
 		log.Info(" network.vpn.connect         - Connect VPN (params: uuidOrName|name|uuid, singleActive?)")
-		log.Info(" network.vpn.disconnect      - Disconnect VPN (params: uuidOrName|name|uuid)")
+		log.Info(" network.vpn.disconnect      - Disconnect VPN or cancel its pending login (params: uuidOrName|name|uuid)")
 		log.Info(" network.vpn.disconnectAll   - Disconnect all VPNs")
 		log.Info(" network.vpn.clearCredentials - Clear saved VPN credentials (params: uuidOrName|name|uuid)")
 		log.Info(" network.vpn.plugins         - List available VPN plugins")

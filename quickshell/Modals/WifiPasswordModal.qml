@@ -48,6 +48,11 @@ DModal {
             root.show(NetworkService.connectingSSID);
             NetworkService.passwordDialogShouldReopen = false;
         }
+
+        function onCredentialsClosed(token) {
+            if (root.shouldBeVisible && form.isPromptMode && form.promptToken === token)
+                root.close();
+        }
     }
 
     DDialog {

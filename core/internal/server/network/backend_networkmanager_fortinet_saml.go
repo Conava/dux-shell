@@ -196,14 +196,12 @@ func (b *NetworkManagerBackend) authenticateFortinetSAML(ctx context.Context, ta
 	}
 
 	if newlyTrusted {
-		b.pendingVPNSaveMu.Lock()
-		b.pendingVPNSave = &pendingVPNCredentials{
+		auth.pendingSave = &pendingVPNCredentials{
 			ConnectionPath: target.ConnectionPath,
 			PersistentData: map[string]string{
 				"trusted-cert": appendTrustedCert(target.Data["trusted-cert"], cert.Digest),
 			},
 		}
-		b.pendingVPNSaveMu.Unlock()
 	}
 
 	return auth, nil

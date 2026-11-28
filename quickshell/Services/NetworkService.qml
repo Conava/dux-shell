@@ -139,6 +139,7 @@ Singleton {
     signal networksUpdated
     signal connectionChanged
     signal credentialsNeeded(string token, string ssid, string setting, var fields, var hints, string reason, string connType, string connName, string vpnService, var fieldsInfo)
+    signal credentialsClosed(string token)
 
     property var activeService: null
 
@@ -189,6 +190,9 @@ Singleton {
             }
             if (activeService.credentialsNeeded) {
                 activeService.credentialsNeeded.connect(root.credentialsNeeded);
+            }
+            if (activeService.credentialsClosed) {
+                activeService.credentialsClosed.connect(root.credentialsClosed);
             }
         }
     }
