@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/duxlabs-dev/dux-shell/core/internal/log"
 )
@@ -20,6 +21,8 @@ type openConnectAuthResult struct {
 	Fingerprint string
 	ConnectURL  string
 	Resolve     string
+	// pendingSave is queued by runBrowserLogin unless the login was cancelled.
+	pendingSave *pendingVPNCredentials
 }
 
 type openConnectAuthError struct {
@@ -60,6 +63,12 @@ func (b *NetworkManagerBackend) runGlobalProtectSAMLAuth(ctx context.Context, ga
 	}
 
 	cmd := exec.CommandContext(ctx, gpSamlPath, args...)
+	// Its WebKit helpers inherit stdout and would keep the reader below
+	// blocked after gp-saml-gui itself is killed, so kill the whole group.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

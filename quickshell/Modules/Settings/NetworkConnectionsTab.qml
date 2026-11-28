@@ -70,8 +70,8 @@ Item {
         return group === "hotspot" ? groupIcons.hotspot : CE.typeInfo(profile.type)?.icon ?? groupIcons[group] ?? "settings_ethernet";
     }
 
-    function subtitleFor(profile) {
-        if (profile.activeState === "activating")
+    function subtitleFor(profile, connecting) {
+        if (connecting)
             return I18n.tr("Connecting...");
         if (profile.active)
             return profile.device ? I18n.tr("Connected") + " • " + profile.device : I18n.tr("Connected");
@@ -126,6 +126,10 @@ Item {
         readonly property bool isHotspot: !!NetworkService.hotspotUuid && profile.uuid === NetworkService.hotspotUuid
         readonly property bool supported: CE.isSupported(profile.type, profile.controller ? profile.portType : "")
         readonly property bool openable: supported && (!isHotspot || NetworkService.hotspotAvailable)
+        // VPNs connect through the VPN service, which runs their logins and can cancel them.
+        readonly property bool isVpn: group === "vpn" && DMSNetworkService.vpnAvailable
+        readonly property bool connecting: isVpn ? DMSNetworkService.isVpnConnectingUuid(profile.uuid) : profile.activeState === "activating"
+        readonly property bool vpnCanCancel: isVpn && DMSNetworkService.canCancelVpnConnect(profile.uuid)
 
         readonly property bool deviceAvailable: {
             switch (profile.type) {
@@ -140,7 +144,8 @@ Item {
         }
 
         title: profile.id
-        subtitle: root.subtitleFor(profile) + (supported ? "" : " • " + I18n.tr("Not supported in Settings", "network connection list and editor: this connection type can only be edited in another tool"))
+        subtitle: root.subtitleFor(profile, connecting) + (supported ? "" : " • " + I18n.tr("Not supported in Settings", "network connection list and editor: this connection type can only be edited in another tool"))
+        subtitleColor: connecting ? Theme.warning : supportingContentColor
         iconName: root.profileIcon(profile, group)
         active: profile.active
         clickable: openable
@@ -153,10 +158,13 @@ Item {
 
         DActionButton {
             visible: !profileRow.isHotspot && (profileRow.profile.active || profileRow.deviceAvailable)
-            iconName: profileRow.profile.active ? "link_off" : "link"
-            tooltipText: profileRow.profile.active ? I18n.tr("Disconnect") : I18n.tr("Connect")
+            iconName: profileRow.profile.active || profileRow.vpnCanCancel ? "link_off" : "link"
+            tooltipText: profileRow.vpnCanCancel ? I18n.tr("Cancel", "cancel a pending VPN connection") : (profileRow.profile.active ? I18n.tr("Disconnect") : I18n.tr("Connect"))
+            enabled: !profileRow.isVpn || DMSNetworkService.canToggleVpn(profileRow.profile.uuid)
             onClicked: {
-                if (profileRow.profile.active)
+                if (profileRow.isVpn)
+                    DMSNetworkService.toggle(profileRow.profile.uuid);
+                else if (profileRow.profile.active)
                     NetworkService.deactivateConnection(profileRow.profile.uuid);
                 else
                     NetworkService.activateConnection(profileRow.profile.uuid, "");

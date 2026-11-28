@@ -440,3 +440,54 @@ func TestWriteFortinetSAMLPage(t *testing.T) {
 		assert.NotContains(t, body, "window.close()")
 	})
 }
+
+func TestCancelledQueuedLoginKeepsTheNextOneWaiting(t *testing.T) {
+	b := &NetworkManagerBackend{state: &BackendState{}}
+	held, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := held.Addr().String()
+	release := make(chan struct{})
+	start := func(uuid string, login func(context.Context) (*openConnectAuthResult, error)) <-chan error {
+		errs := make(chan error, 1)
+		go func() {
+			_, err := b.runBrowserLogin(t.Context(), browserLoginOwner{UUID: uuid}, login)
+			errs <- err
+		}()
+		return errs
+	}
+	pending := func(uuid string) func() bool {
+		return func() bool {
+			b.stateMutex.RLock()
+			defer b.stateMutex.RUnlock()
+			return b.state.VPNBrowserLoginUuid == uuid
+		}
+	}
+
+	first := start("a", func(context.Context) (*openConnectAuthResult, error) {
+		<-release
+		return nil, held.Close()
+	})
+	require.Eventually(t, pending("a"), time.Second, 5*time.Millisecond)
+	queued := start("c", func(context.Context) (*openConnectAuthResult, error) { return &openConnectAuthResult{}, nil })
+	require.Eventually(t, pending("c"), time.Second, 5*time.Millisecond)
+
+	assert.NotNil(t, b.cancelBrowserLogin(func(o browserLoginOwner) bool { return o.UUID == "c" }, false))
+	select {
+	case err := <-queued:
+		assert.ErrorIs(t, err, errVPNBrowserLoginCancelled)
+	case <-time.After(time.Second):
+		t.Fatal("the cancelled queued login kept waiting")
+	}
+
+	next := start("d", func(context.Context) (*openConnectAuthResult, error) {
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		return &openConnectAuthResult{}, l.Close()
+	})
+	time.Sleep(100 * time.Millisecond)
+	close(release)
+	assert.ErrorIs(t, <-first, errVPNBrowserLoginCancelled)
+	assert.NoError(t, <-next)
+}

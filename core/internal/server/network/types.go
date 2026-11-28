@@ -171,6 +171,7 @@ type NetworkState struct {
 	LastError                  string               `json:"lastError"`
 	VPNError                   string               `json:"vpnError"`
 	VPNErrorUuid               string               `json:"vpnErrorUuid"`
+	VPNBrowserLoginUuid        string               `json:"vpnBrowserLoginUuid"`
 }
 
 type ConnectionRequest struct {
@@ -218,6 +219,7 @@ type Manager struct {
 	priorityMutex         sync.Mutex
 	notifierWg            sync.WaitGroup
 	credentialSubscribers pubsub.Broker[CredentialPrompt]
+	closedSubscribers     pubsub.Broker[CredentialClosed]
 }
 
 type EventType string
@@ -255,6 +257,8 @@ type PromptReply struct {
 	Secrets map[string]string `json:"secrets"`
 	Save    bool              `json:"save"`
 	Cancel  bool              `json:"cancel"`
+
+	closedByBackend bool
 }
 
 type FieldInfo struct {
@@ -276,6 +280,11 @@ type CredentialPrompt struct {
 	Reason         string      `json:"reason"`
 	ConnectionId   string      `json:"connectionId"`
 	ConnectionUuid string      `json:"connectionUuid"`
+}
+
+// CredentialClosed is sent as its own service so shells that predate it ignore it.
+type CredentialClosed struct {
+	Token string `json:"token"`
 }
 
 type NetworkInfoResponse struct {

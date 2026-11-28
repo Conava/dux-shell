@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,4 +175,20 @@ printf '%s\n' "COOKIE='c'" "HOST='192.0.2.1'" "CONNECT_URL='https://vpn.example.
 			}
 		})
 	}
+}
+
+func TestGlobalProtectSAMLCancelEndsHelpers(t *testing.T) {
+	dir := t.TempDir()
+	// The background sleep holds stdout open, like gp-saml-gui's WebKit helpers.
+	script := "#!/bin/sh\nsleep 30 &\nexec sleep 30\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "gp-saml-gui"), []byte(script), 0o755))
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	time.AfterFunc(200*time.Millisecond, cancel)
+
+	start := time.Now()
+	_, err := (&NetworkManagerBackend{}).runGlobalProtectSAMLAuth(ctx, "vpn.example.com", "gp")
+	assert.Error(t, err)
+	assert.Less(t, time.Since(start), 2*time.Second)
 }

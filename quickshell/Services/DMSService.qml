@@ -59,6 +59,7 @@ Singleton {
     signal loginctlStateUpdate(var data)
     signal capabilitiesReceived
     signal credentialsRequest(var data)
+    signal credentialsClosedEvent(var data)
     signal bluetoothPairingRequest(var data)
     signal mprisCommandReceived(string command)
     signal brightnessStateUpdate(var data)
@@ -306,6 +307,8 @@ Singleton {
             networkStateUpdate(data);
         } else if (service === "network.credentials") {
             credentialsRequest(data);
+        } else if (service === "network.credentials.closed") {
+            credentialsClosedEvent(data);
         } else if (service === "loginctl") {
             loginctlStateUpdate(data);
         } else if (service === "bluetooth.pairing") {

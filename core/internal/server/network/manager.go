@@ -94,9 +94,10 @@ func NewManager() (*Manager, error) {
 		stopChan:              make(chan struct{}),
 		dirty:                 make(chan struct{}, 1),
 		credentialSubscribers: pubsub.Broker[CredentialPrompt]{BufSize: 16},
+		closedSubscribers:     pubsub.Broker[CredentialClosed]{BufSize: 16},
 	}
 
-	broker := NewSubscriptionBroker(m.broadcastCredentialPrompt)
+	broker := NewSubscriptionBroker(m.broadcastCredentialPrompt, m.broadcastCredentialClosed)
 	if err := backend.SetPromptBroker(broker); err != nil {
 		return nil, fmt.Errorf("failed to set prompt broker: %w", err)
 	}
@@ -385,6 +386,7 @@ func (m *Manager) syncStateFromBackend() error {
 	m.state.LastError = backendState.LastError
 	m.state.VPNError = backendState.VPNError
 	m.state.VPNErrorUuid = backendState.VPNErrorUuid
+	m.state.VPNBrowserLoginUuid = backendState.VPNBrowserLoginUuid
 	m.stateMutex.Unlock()
 
 	return nil
@@ -526,6 +528,9 @@ func stateChangedMeaningfully(old, new *NetworkState) bool {
 		return true
 	}
 	if old.VPNError != new.VPNError || old.VPNErrorUuid != new.VPNErrorUuid {
+		return true
+	}
+	if old.VPNBrowserLoginUuid != new.VPNBrowserLoginUuid {
 		return true
 	}
 	if len(old.WiFiNetworks) != len(new.WiFiNetworks) {
@@ -723,6 +728,18 @@ func (m *Manager) UnsubscribeCredentials(id string, ch chan CredentialPrompt) {
 	m.credentialSubscribers.Unsubscribe(id, ch)
 }
 
+func (m *Manager) SubscribeCredentialsClosed(id string) chan CredentialClosed {
+	return m.closedSubscribers.Subscribe(id)
+}
+
+func (m *Manager) UnsubscribeCredentialsClosed(id string, ch chan CredentialClosed) {
+	m.closedSubscribers.Unsubscribe(id, ch)
+}
+
+func (m *Manager) broadcastCredentialClosed(c CredentialClosed) {
+	m.closedSubscribers.Publish(c)
+}
+
 func (m *Manager) broadcastCredentialPrompt(prompt CredentialPrompt) {
 	m.credentialSubscribers.Publish(prompt)
 }
@@ -772,6 +789,7 @@ func (m *Manager) Close() {
 
 	m.subscribers.Close()
 	m.credentialSubscribers.Close()
+	m.closedSubscribers.Close()
 }
 
 func (m *Manager) ScanWiFi() error {
