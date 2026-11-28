@@ -4,16 +4,16 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    readonly property int level: SettingsData.batteryPopoutDensity === "shell" ? Theme.densityLevel : Theme.densityLevelFor(SettingsData.batteryPopoutDensity)
-    readonly property string style: SettingsData.batteryPopoutStyle === "line" && level < 0 ? "compact" : SettingsData.batteryPopoutStyle
-    readonly property bool combined: SettingsData.batteryPopoutCards === "combined"
+    // The setting picks the variant (spacious or compact), the shell density the tier inside it.
+    readonly property bool compact: SettingsData.batteryPopoutDensity === "compact"
+    readonly property int level: Theme.densityLevel >= 0 ? (compact ? -1 : 1) : (compact ? -2 : 0)
+    readonly property string colorMode: SettingsData.batteryPopoutColor === "primary" ? "primarycharging" : SettingsData.batteryPopoutColor
     readonly property int tileColumns: 2
     readonly property int deviceTileColumns: 3
     readonly property real stepXS: level * Theme.spacingXXS
     readonly property real stepS: level * Theme.spacingXS
     readonly property real stepM: level * Theme.spacingS
 
-    readonly property bool compact: level < 0
     readonly property bool dense: level < -1
     readonly property real spaciousStep: Math.max(0, level) * Theme.spacingXL
 
@@ -35,17 +35,16 @@ Singleton {
     readonly property real boltCircle: Theme.iconSizeSmall + Theme.spacingS
     readonly property real compactIconSize: Theme.iconSizeSmall + Theme.spacingXS
 
-    readonly property real heroSmall: Theme.buttonHeightM + (dense ? 0 : Theme.spacingL)
+    readonly property real heroSmall: Theme.buttonHeightM + Theme.spacingL
     readonly property real heroRing: 184 + spaciousStep
     readonly property real heroRingBeside: heroRing - Theme.iconButtonSize
     readonly property real cardFill: compact ? heroSmall : 136 + level * Theme.spacingXL
-    readonly property real smallNumberSize: dense ? Theme.fontSizeXXLarge : Theme.fontSizeDisplay
+    readonly property real smallNumberSize: Theme.fontSizeDisplay
 
     readonly property real gaugeStroke: Theme.spacingXS
     readonly property real barStroke: 6
     readonly property real heroStroke: Theme.spacingS
     readonly property real heroActionsInset: Theme.spacingXS
-    readonly property real badge: Theme.minimumTouchTargetSize
     readonly property real badgeCut: 1.5
     readonly property real wavelength: 40
     readonly property real waveAmp: 3
@@ -67,11 +66,10 @@ Singleton {
     readonly property real popRotation: -40
     readonly property real pastLimitShade: 0.28
     readonly property real trackTintAmount: 0.26
-    readonly property real ringBadgeTrack: 0.3
 
     // The wave only shows while charging and away from both ends, where it would read as noise.
-    function waveOn(wavy, charging, level) {
-        return wavy && charging && !Theme.reduceMotion && level > 10 && level < 95;
+    function waveOn(charging, level) {
+        return charging && !Theme.reduceMotion && level > 10 && level < 95;
     }
 
     // A spanning last cell ends its row.

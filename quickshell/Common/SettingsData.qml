@@ -825,9 +825,6 @@ Singleton {
     property string batteryPopoutColor: Spec.SPEC.batteryPopoutColor.def
     property string batteryPopoutStyle: Spec.SPEC.batteryPopoutStyle.def
     property string batteryPopoutDensity: Spec.SPEC.batteryPopoutDensity.def
-    property string batteryPopoutCards: Spec.SPEC.batteryPopoutCards.def
-    property string batteryPopoutBadge: Spec.SPEC.batteryPopoutBadge.def
-    property bool batteryPopoutWavy: Spec.SPEC.batteryPopoutWavy.def
     property bool batteryPopoutBattery: Spec.SPEC.batteryPopoutBattery.def
     property bool batteryPopoutStats: Spec.SPEC.batteryPopoutStats.def
     property string batteryPopoutDetailsLayout: Spec.SPEC.batteryPopoutDetailsLayout.def

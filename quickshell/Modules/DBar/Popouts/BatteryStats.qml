@@ -14,8 +14,6 @@ Item {
     property real topRadius: Theme.groupedListOuterRadius
     property real bottomRadius: Theme.groupedListOuterRadius
     property bool spread: false
-    // Unframed, the stats sit inside a card that is drawn around them
-    property bool framed: true
 
     readonly property string layout: SettingsData.batteryPopoutDetailsLayout
     readonly property int count: model.length
@@ -118,9 +116,9 @@ Item {
                     required index
 
                     count: root.count
-                    topRadius: root.framed ? root.topRadius : Theme.cornerRadiusM
-                    bottomRadius: root.framed ? root.bottomRadius : Theme.cornerRadiusM
-                    color: root.framed ? surfaceColor : Theme.chipSurface
+                    topRadius: Theme.cornerRadiusM
+                    bottomRadius: Theme.cornerRadiusM
+                    color: Theme.chipSurface
                     label: tile.modelData.label
                     value: tile.modelData.value
                     valueColor: root.tone(tile.modelData.bad, Theme.surfaceText)
@@ -194,7 +192,7 @@ Item {
     }
 
     component FrameCard: BatteryCard {
-        framed: root.framed
+        framed: false
         restRadius: Theme.groupedListInnerRadius
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius
@@ -300,7 +298,7 @@ Item {
         property bool bad: false
         property var radii
 
-        framed: root.framed
+        framed: false
         pad: 0
         height: Math.max(BatteryPopoutMetrics.row, rowContent.implicitHeight + Theme.spacingXS * 2)
         restRadius: Theme.groupedListInnerRadius
@@ -314,8 +312,6 @@ Item {
         RowLayout {
             id: rowContent
             anchors.fill: parent
-            anchors.leftMargin: root.framed ? Theme.spacingM : 0
-            anchors.rightMargin: root.framed ? Theme.spacingM : 0
             anchors.topMargin: Theme.spacingXS
             anchors.bottomMargin: Theme.spacingXS
             spacing: Theme.spacingM

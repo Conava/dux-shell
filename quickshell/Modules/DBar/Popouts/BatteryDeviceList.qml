@@ -18,8 +18,7 @@ Item {
     readonly property var items: Array.isArray(root.devices) ? root.devices : []
     readonly property int count: root.items.length
     readonly property string layoutName: SettingsData.batteryPopoutDevicesLayout
-    readonly property string colorMode: SettingsData.batteryPopoutColor
-    readonly property bool wavy: SettingsData.batteryPopoutWavy
+    readonly property string colorMode: BatteryPopoutMetrics.colorMode
 
     readonly property int fadeDuration: Theme.expressiveDurations.expressiveEffects
     readonly property int collapseDuration: Theme.expressiveDurations.expressiveSlowEffects
@@ -47,7 +46,7 @@ Item {
     }
 
     function valueColor(device) {
-        return device.low && (root.colorMode === "primary" || root.colorMode === "lowcharging") ? Theme.error : Theme.surfaceText;
+        return device.low && (root.colorMode === "primarycharging" || root.colorMode === "lowcharging") ? Theme.error : Theme.surfaceText;
     }
 
     function level(device) {
@@ -104,7 +103,7 @@ Item {
             strokeWidth: BatteryPopoutMetrics.gaugeStroke
             trackStrokeWidth: BatteryPopoutMetrics.gaugeStroke
             gapSize: BatteryPopoutMetrics.ringGap
-            wavy: BatteryPopoutMetrics.waveOn(root.wavy, ring.device.charging, root.level(ring.device))
+            wavy: BatteryPopoutMetrics.waveOn(ring.device.charging, root.level(ring.device))
             waveSpeed: 0
 
             Behavior on progress {
@@ -302,7 +301,7 @@ Item {
                                 lineWidth: BatteryPopoutMetrics.barStroke
                                 wavelength: BatteryPopoutMetrics.wavelength
                                 amp: BatteryPopoutMetrics.waveAmpThin
-                                isPlaying: BatteryPopoutMetrics.waveOn(root.wavy, row.modelData.charging, row.levelValue)
+                                isPlaying: BatteryPopoutMetrics.waveOn(row.modelData.charging, row.levelValue)
                                 fillColor: row.accent
                                 trackColor: Theme.secondaryContainer
                                 trackGap: BatteryPopoutMetrics.trackGap

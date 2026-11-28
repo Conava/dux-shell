@@ -484,15 +484,22 @@ Singleton {
 
     // An unknown reading (0) never counts as low or as a level; `neutral` is what the caller draws for plain text and icons.
     // `pluggedIn` is only passed for the system battery: on AC but not charging it keeps the accent.
+    // The bar's stored "primary" is the popout's Primary look; plain "primary" stays the accent-and-red one the Control Center and dash use.
+    function barColorMode(stored) {
+        return stored === "primary" ? "primarycharging" : stored;
+    }
+
     function colorFor(mode, percentage, charging, neutral, pluggedIn) {
         if (!(percentage > 0))
-            return mode === "primary" ? Theme.primary : neutral;
+            return mode === "primary" || mode === "primarycharging" ? Theme.primary : neutral;
 
         const low = BatteryDevices.isLow(percentage, charging, SettingsData.batteryLowThreshold);
 
         switch (mode) {
         case "primary":
             return low ? Theme.error : Theme.primary;
+        case "primarycharging":
+            return low ? Theme.error : charging ? Theme.success : Theme.primary;
         case "lowcharging":
             return low ? Theme.error : charging ? Theme.success : pluggedIn ? Theme.primary : neutral;
         case "level":

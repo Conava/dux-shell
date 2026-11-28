@@ -60,11 +60,7 @@ Column {
         })
     readonly property var detailKeys: Spec.BATTERY_POPOUT_DETAILS.filter(key => key !== "temperature" || BatteryService.batteryTemperature > 0)
     readonly property var detailLabels: detailKeys.map(key => detailLabelByKey[key])
-    // Line falls back to the compact look at compact densities, so it is not offered there.
-    readonly property var styleKeys: Spec.BATTERY_POPOUT_STYLES.filter(key => !(BatteryPopoutMetrics.compact && key === "line"))
-    readonly property bool wavyApplies: (BatteryService.popoutHasHero && BatteryPopoutMetrics.style !== "card") || (BatteryService.popoutListsDevices && ["compact", "list"].indexOf(SettingsData.batteryPopoutDevicesLayout) >= 0)
     readonly property var styleLabelByKey: ({
-            "compact": I18n.tr("Compact", "battery settings: popout style option, number beside the title without a card"),
             "line": I18n.tr("Line", "battery settings: popout gauge style option"),
             "ring": I18n.tr("Ring", "noun, battery widget ring gauge style option"),
             "card": I18n.tr("Card", "battery settings: popout gauge style option, filled card")
@@ -95,12 +91,12 @@ Column {
 
         SettingsButtonGroupRow {
             settingKey: "batteryColorMode"
-            tags: ["battery", "color", "level", "low", "charging", "theme", "icon", "meter", "indicator", "accent", "green", "red"]
+            tags: ["battery", "color", "primary", "level", "low", "charging", "theme", "icon", "meter", "indicator", "accent", "green", "red"]
             text: I18n.tr("Color", "battery bar widget: how the battery is colored")
             visible: (BatteryService.batteryAvailable || BatteryService.hasPeripherals) && !(root.page?.dockHosted ?? false)
             resetStore: root.barStore
             resetKeys: ["batteryColorMode"]
-            model: [I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
+            model: [I18n.tr("Primary", "battery settings: popout color option, accent color"), I18n.tr("Theme", "battery settings: plain widget colors, like other bar widgets"), I18n.tr("Low and charging", "battery settings: red when low, green while charging"), I18n.tr("Level", "battery settings: charge level indicator colors")]
             values: Spec.BATTERY_BAR_COLORS
             value: root.barConfig?.batteryColorMode ?? SettingsData.barConfigDefault("batteryColorMode")
             fallbackValue: SettingsData.barConfigDefault("batteryColorMode")
@@ -210,7 +206,7 @@ Column {
         iconName: "web_asset"
         title: I18n.tr("Popout", "battery settings: card title for the battery popout appearance")
         settingKey: "batteryPopout"
-        tags: ["battery", "popout", "appearance", "color", "density", "spacious", "comfortable", "compact", "dense", "wavy", "wave"]
+        tags: ["battery", "popout", "appearance", "color", "density", "spacious", "compact"]
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutColor"
@@ -224,33 +220,12 @@ Column {
 
         SettingsButtonGroupRow {
             settingKey: "batteryPopoutDensity"
-            tags: ["battery", "popout", "density", "spacious", "comfortable", "compact", "dense", "spacing", "size"]
+            tags: ["battery", "popout", "density", "spacious", "compact", "spacing", "size"]
             text: I18n.tr("Interface density", "interface density setting label")
-            model: [I18n.tr("Inherit", "inherit from global setting"), I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Comfortable", "interface density option with the default spacing"), I18n.tr("Compact", "interface density option fitting the most items on screen"), I18n.tr("Dense", "interface density option denser than compact for small text and tight rows")]
+            model: [I18n.tr("Spacious", "interface density option with the most room between items"), I18n.tr("Compact", "interface density option fitting the most items on screen")]
             values: Spec.BATTERY_POPOUT_DENSITIES
             value: SettingsData.batteryPopoutDensity
-            fallbackValue: "shell"
             onValueSelected: value => SettingsData.set("batteryPopoutDensity", value)
-        }
-
-        SettingsButtonGroupRow {
-            settingKey: "batteryPopoutCards"
-            tags: ["battery", "popout", "cards", "separate", "combined", "single", "one", "card", "group"]
-            text: I18n.tr("Cards", "battery settings: whether the popout sections each get a card or share one")
-            model: [I18n.tr("Separate", "battery settings: popout cards option, each section has its own card"), I18n.tr("Combined", "battery settings: popout cards option, level, power profile and details share one card")]
-            values: Spec.BATTERY_POPOUT_CARDS
-            enabled: BatteryService.popoutHasHero
-            value: SettingsData.batteryPopoutCards
-            onValueSelected: value => SettingsData.set("batteryPopoutCards", value)
-        }
-
-        SettingsToggleRow {
-            settingKey: "batteryPopoutWavy"
-            tags: ["battery", "popout", "wavy", "wave", "charging", "animation"]
-            visible: root.wavyApplies
-            text: I18n.tr("Wavy when charging", "battery popout: wavy level indicator while charging")
-            checked: SettingsData.batteryPopoutWavy
-            onToggled: checked => SettingsData.set("batteryPopoutWavy", checked)
         }
     }
 
@@ -258,31 +233,8 @@ Column {
         iconName: "battery_full"
         title: I18n.tr("Overview", "battery settings: card title for the popout battery section")
         settingKey: "batteryPopoutBatteryCard"
-        tags: ["battery", "popout", "section", "style", "badge", "compact", "line", "ring", "card"]
+        tags: ["battery", "popout", "section", "style", "line", "ring", "card"]
         visible: BatteryService.batteryAvailable || BatteryService.popoutHasHero
-
-        SettingsButtonGroupRow {
-            settingKey: "batteryPopoutStyle"
-            enabled: BatteryService.popoutHasHero
-            tags: ["battery", "popout", "style", "compact", "line", "ring", "card"]
-            text: I18n.tr("Style", "battery settings: style of the battery popout gauge")
-            model: root.styleKeys.map(key => root.styleLabelByKey[key])
-            values: root.styleKeys
-            value: BatteryPopoutMetrics.style
-            onValueSelected: value => SettingsData.set("batteryPopoutStyle", value)
-        }
-
-        SettingsButtonGroupRow {
-            settingKey: "batteryPopoutBadge"
-            enabled: BatteryService.popoutHasHero
-            tags: ["battery", "popout", "badge", "shape", "ring", "icon"]
-            visible: !BatteryPopoutMetrics.compact && (BatteryPopoutMetrics.style === "line" || BatteryPopoutMetrics.style === "card")
-            text: I18n.tr("Badge", "battery settings: shape behind the battery icon in the popout")
-            model: [I18n.tr("Shape", "battery settings: popout badge option, filled shape"), I18n.tr("Ring", "noun, battery widget ring gauge style option")]
-            values: Spec.BATTERY_POPOUT_BADGES
-            value: SettingsData.batteryPopoutBadge
-            onValueSelected: value => SettingsData.set("batteryPopoutBadge", value)
-        }
 
         SettingsToggleRow {
             settingKey: "batteryPopoutBattery"
@@ -291,6 +243,17 @@ Column {
             visible: BatteryService.batteryAvailable
             checked: SettingsData.batteryPopoutBattery
             onToggled: checked => SettingsData.set("batteryPopoutBattery", checked)
+        }
+
+        SettingsButtonGroupRow {
+            settingKey: "batteryPopoutStyle"
+            enabled: BatteryService.popoutHasHero
+            tags: ["battery", "popout", "style", "line", "ring", "card"]
+            text: I18n.tr("Style", "battery settings: style of the battery popout gauge")
+            model: Spec.BATTERY_POPOUT_STYLES.map(key => root.styleLabelByKey[key])
+            values: Spec.BATTERY_POPOUT_STYLES
+            value: SettingsData.batteryPopoutStyle
+            onValueSelected: value => SettingsData.set("batteryPopoutStyle", value)
         }
     }
 

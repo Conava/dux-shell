@@ -2,7 +2,6 @@
 .import "../../DCommon/Common/settings/SharedSettingsSpec.js" as Shared
 .import "../../DCommon/Common/settings/SpecUtil.js" as Util
 .import "DockConfig.js" as DockConfig
-.import "DensityPresets.js" as DensityPresets
 
 function lockWidgetDefaults() {
     return Shared.lockWidgetDefaults();
@@ -35,6 +34,14 @@ function oneOf(values) {
     return v => values.indexOf(v) >= 0 ? v : undefined;
 }
 
+function batteryPopoutStyle(v) {
+    return oneOf(BATTERY_POPOUT_STYLES)(v === "compact" ? "line" : v);
+}
+
+function batteryPopoutColor(v) {
+    return oneOf(BATTERY_POPOUT_COLORS)(v);
+}
+
 function subsetOf(values) {
     return v => Array.isArray(v) ? v.filter(x => values.indexOf(x) >= 0) : undefined;
 }
@@ -42,12 +49,10 @@ function subsetOf(values) {
 var BATTERY_POPOUT_DETAILS = ["health", "temperature", "capacity", "power"];
 var BATTERY_POPOUT_LAYOUTS = ["grid", "compact", "chips", "list"];
 var BATTERY_POPOUT_DEVICE_LAYOUTS = ["grid", "compact", "chips", "list", "bars"];
-var BATTERY_BAR_COLORS = ["theme", "lowcharging", "level"];
-var BATTERY_POPOUT_COLORS = ["primary"].concat(BATTERY_BAR_COLORS);
-var BATTERY_POPOUT_STYLES = ["compact", "line", "ring", "card"];
-var BATTERY_POPOUT_BADGES = ["shape", "ring"];
-var BATTERY_POPOUT_DENSITIES = ["shell"].concat(DensityPresets.LEVELS);
-var BATTERY_POPOUT_CARDS = ["separate", "combined"];
+var BATTERY_BAR_COLORS = ["primary", "theme", "lowcharging", "level"];
+var BATTERY_POPOUT_COLORS = ["primary", "theme", "lowcharging", "level"];
+var BATTERY_POPOUT_STYLES = ["line", "ring", "card"];
+var BATTERY_POPOUT_DENSITIES = ["spacious", "compact"];
 var BATTERY_POPOUT_POWER_STYLES = ["circle", "segments", "buttons", "slider"];
 
 var LOCAL_SPEC = {
@@ -1281,27 +1286,16 @@ var LOCAL_SPEC = {
         def: 20
     },
     batteryPopoutColor: {
-        def: "lowcharging",
-        coerce: oneOf(BATTERY_POPOUT_COLORS)
+        def: "primary",
+        coerce: batteryPopoutColor
     },
     batteryPopoutStyle: {
         def: "ring",
-        coerce: oneOf(BATTERY_POPOUT_STYLES)
+        coerce: batteryPopoutStyle
     },
     batteryPopoutDensity: {
-        def: "shell",
+        def: "spacious",
         coerce: oneOf(BATTERY_POPOUT_DENSITIES)
-    },
-    batteryPopoutCards: {
-        def: "combined",
-        coerce: oneOf(BATTERY_POPOUT_CARDS)
-    },
-    batteryPopoutBadge: {
-        def: "shape",
-        coerce: oneOf(BATTERY_POPOUT_BADGES)
-    },
-    batteryPopoutWavy: {
-        def: true
     },
     batteryPopoutBattery: {
         def: true

@@ -12,8 +12,6 @@ BatteryCard {
 
     property bool active: false
     property bool showHeading: true
-    // Extra content as the last row of the card
-    property Component footer: null
 
     readonly property string style: SettingsData.batteryPopoutPowerStyle
     readonly property bool slider: style === "slider"
@@ -110,12 +108,6 @@ BatteryCard {
         Loader {
             width: parent.width
             sourceComponent: root.style === "circle" ? circleComp : (root.slider ? sliderComp : groupComp)
-        }
-
-        Loader {
-            width: parent.width
-            visible: root.footer !== null
-            sourceComponent: root.footer
         }
     }
 

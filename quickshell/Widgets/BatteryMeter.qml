@@ -18,7 +18,7 @@ Item {
     property bool showNumber: true
     property bool showBolt: true
     property string meterStyle: "solid"
-    // A bar battery color mode ("theme", "lowcharging", "level"), or "primary": the accent, red when low.
+    // A bar battery color mode ("primarycharging", "theme", "lowcharging", "level"), or "primary": the accent, red when low.
     property string colorMode: "primary"
     property color neutralColor: Theme.isLightColor(Theme.primary) === Theme.isLightColor(Theme.surface) ? Theme.surfaceText : Theme.primary
     property real maxDiameter: 0

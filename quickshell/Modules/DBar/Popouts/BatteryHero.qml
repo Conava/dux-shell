@@ -19,16 +19,13 @@ Item {
     property bool factsBeside: false
     property bool showEdit: true
     property bool active: false
-    // Unframed, the hero sits inside a card that is drawn around it
-    property bool framed: true
     property real topRadius: Theme.cornerRadiusL
     property real bottomRadius: Theme.cornerRadiusL
 
     signal settingsRequested
     signal editRequested
 
-    readonly property string style: BatteryPopoutMetrics.style
-    readonly property bool wavy: SettingsData.batteryPopoutWavy
+    readonly property string style: SettingsData.batteryPopoutStyle
     readonly property bool compact: BatteryPopoutMetrics.compact
     readonly property bool unknown: root.source.unknown ?? false
     readonly property real percentage: root.unknown ? 0 : Math.max(0, Math.min(100, root.source.percentage ?? 0))
@@ -42,24 +39,18 @@ Item {
     readonly property string time: root.source.time ?? ""
     readonly property string timeLine: [root.time, root.source.rate ?? ""].filter(part => part !== "").join(" · ")
 
-    readonly property string colorMode: SettingsData.batteryPopoutColor
+    readonly property string colorMode: BatteryPopoutMetrics.colorMode
     readonly property real level: root.unknown ? 0 : Math.max(0, Math.min(100, root.source.level ?? root.source.percentage ?? 0))
     readonly property color accent: BatteryService.colorFor(root.colorMode, root.level, root.charging, Theme.surfaceText, root.source.pluggedIn ?? false)
-    readonly property bool lowTone: (root.colorMode === "primary" || root.colorMode === "lowcharging") && root.accent === Theme.error
-    readonly property color badgeFill: root.lowTone ? Theme.errorContainer : root.colorMode === "theme" ? Theme.surfaceContainerHighest : Theme.primaryContainer
-    readonly property color badgeInk: root.lowTone ? Theme.onErrorContainer : root.colorMode === "theme" ? Theme.surfaceText : Theme.onPrimaryContainer
-    readonly property string badgeKind: SettingsData.batteryPopoutBadge === "ring" ? "ring" : "shape"
-    readonly property bool waveOn: BatteryPopoutMetrics.waveOn(root.wavy, root.charging, root.level)
+    readonly property bool waveOn: BatteryPopoutMetrics.waveOn(root.charging, root.level)
 
     property real shownValue: Math.max(0, root.value)
 
     readonly property real actionsWidth: BatteryPopoutMetrics.button * (root.showEdit ? 2 : 1) + (root.showEdit ? Theme.spacingXXS : 0)
-    // The compact line is the only style with no padding of its own.
-    readonly property real contentPad: root.style === "compact" || !root.framed ? 0 : BatteryPopoutMetrics.pad
-    // Unframed, the shared card around the hero pads it, so the buttons reach back out into that padding.
-    readonly property real actionsInset: BatteryPopoutMetrics.heroActionsInset - (root.framed ? 0 : BatteryPopoutMetrics.pad)
+    // The shared card around the hero pads it, so the buttons reach back out into that padding.
+    readonly property real actionsInset: BatteryPopoutMetrics.heroActionsInset - BatteryPopoutMetrics.pad
     // How far the buttons reach into the content from its trailing edge, plus a gap.
-    readonly property real actionsReserve: Math.max(0, root.actionsInset + root.actionsWidth - root.contentPad) + Theme.spacingS
+    readonly property real actionsReserve: Math.max(0, root.actionsInset + root.actionsWidth) + Theme.spacingS
 
     function pastLimit(color) {
         return Contrast.mix(color, Theme.scrimColor, BatteryPopoutMetrics.pastLimitShade);
@@ -81,7 +72,7 @@ Item {
     }
 
     component HeroCard: BatteryCard {
-        framed: root.framed
+        framed: false
         restRadius: Theme.cornerRadiusL
         topLeftRadius: root.topRadius
         topRightRadius: root.topRadius
@@ -224,48 +215,6 @@ Item {
         }
     }
 
-    component HeroBadge: Item {
-        id: badge
-
-        property string kind: "shape"
-        property string icon
-        property color fill
-        property color ink
-        property real value: -1
-        property color ringColor
-        property color ringTrack
-        readonly property bool ring: badge.kind === "ring"
-
-        implicitWidth: badge.ring ? BatteryPopoutMetrics.badge : Theme.iconButtonSize
-        implicitHeight: implicitWidth
-
-        DMaterialShape {
-            visible: !badge.ring
-            anchors.fill: parent
-            shape: "cookie9"
-            color: badge.fill
-        }
-
-        DCircularWavyProgress {
-            visible: badge.ring
-            anchors.fill: parent
-            progress: Math.max(0, badge.value) / 100
-            wavy: false
-            strokeWidth: BatteryPopoutMetrics.gaugeStroke
-            trackStrokeWidth: BatteryPopoutMetrics.gaugeStroke
-            color: badge.value >= 0 ? badge.ringColor : "transparent"
-            trackColor: badge.ringTrack
-        }
-
-        DIcon {
-            anchors.centerIn: parent
-            name: badge.icon
-            size: Theme.iconSizeMedium
-            color: badge.ring ? badge.ringColor : badge.ink
-            filled: true
-        }
-    }
-
     component HeroActions: Row {
         id: actions
 
@@ -316,7 +265,7 @@ Item {
             StyledText {
                 anchors.left: parent.left
                 anchors.top: parent.top
-                width: parent.width - fillFace.face.reserve
+                width: parent.width
                 text: fillFace.face.status
                 elide: Text.ElideRight
                 font.pixelSize: Theme.fontSizeMedium
@@ -378,14 +327,12 @@ Item {
         height: implicitHeight
         sourceComponent: {
             switch (root.style) {
-            case "compact":
-                return lineCompact;
             case "ring":
                 return root.compact ? ringCompact : (root.factsBeside ? ringBeside : ringFull);
             case "card":
                 return cardLayout;
             default:
-                return lineFull;
+                return root.compact ? lineCompact : lineFull;
             }
         }
     }
@@ -409,45 +356,18 @@ Item {
                 width: parent.width
                 spacing: BatteryPopoutMetrics.gap
 
-                Item {
-                    width: parent.width
-                    height: lineBadge.height
-
-                    StyledText {
-                        anchors.left: parent.left
-                        anchors.right: lineBadge.left
-                        anchors.rightMargin: Theme.spacingS
-                        text: root.status
-                        elide: Text.ElideRight
-                        font.pixelSize: Theme.fontSizeMedium
-                        font.weight: Theme.fontWeightMedium
-                        color: Theme.surfaceVariantText
-                    }
-
-                    HeroBadge {
-                        id: lineBadge
-                        anchors.right: parent.right
-                        anchors.rightMargin: root.actionsReserve
-                        kind: root.badgeKind
-                        icon: root.source.icon ?? ""
-                        fill: root.badgeFill
-                        ink: root.badgeInk
-                        value: root.value
-                        ringColor: root.accent
-                        ringTrack: Theme.secondaryContainer
-                    }
+                StyledText {
+                    width: parent.width - root.actionsReserve
+                    text: root.status
+                    elide: Text.ElideRight
+                    font.pixelSize: Theme.fontSizeMedium
+                    font.weight: Theme.fontWeightMedium
+                    color: Theme.surfaceVariantText
                 }
 
-                Item {
-                    width: parent.width
-                    height: lineNumber.implicitHeight - lineBadge.height / 2
-
-                    HeroNumber {
-                        id: lineNumber
-                        y: -lineBadge.height / 2
-                        value: root.value
-                        color: root.accent
-                    }
+                HeroNumber {
+                    value: root.value
+                    color: root.accent
                 }
 
                 StyledText {
@@ -488,7 +408,7 @@ Item {
 
                     HeroNumber {
                         value: root.value
-                        pixelSize: BatteryPopoutMetrics.dense ? BatteryPopoutMetrics.smallNumberSize : Theme.fontSizeDisplayLarge
+                        pixelSize: Theme.fontSizeDisplayLarge
                         color: root.accent
                     }
 
@@ -672,7 +592,6 @@ Item {
                             status: root.status,
                             sub: root.timeLine,
                             numberSize: root.compact ? BatteryPopoutMetrics.smallNumberSize : Theme.fontSizeDisplayLarge,
-                            reserve: root.compact ? 0 : cardBadge.width + Theme.spacingS,
                             actionsWidth: root.actionsWidth
                         })
 
@@ -736,24 +655,6 @@ Item {
                             face: cardTrack.face
                             ink: cardTrack.fillInk
                         }
-                    }
-
-                    HeroBadge {
-                        id: cardBadge
-
-                        readonly property color surfaceInk: cardTrack.inkAt(cardBadge)
-
-                        visible: !root.compact
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.margins: Theme.spacingS
-                        kind: root.badgeKind
-                        icon: root.source.icon ?? ""
-                        fill: Contrast.readableOnAll([root.accent, cardTrack.trackTint], [root.badgeFill, cardBadge.surfaceInk], 3)
-                        ink: Contrast.readableOn(cardBadge.fill, [root.badgeInk, Theme.surface, Theme.surfaceText])
-                        value: root.value
-                        ringColor: cardBadge.surfaceInk
-                        ringTrack: Theme.withAlpha(cardBadge.surfaceInk, BatteryPopoutMetrics.ringBadgeTrack)
                     }
 
                     HeroActions {
