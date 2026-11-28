@@ -6,6 +6,7 @@
 .import "./DockConfig.js" as DockConfig
 .import "./DensityPresets.js" as DensityPresets
 .import "../GridLayout.js" as GridLayout
+.import "../../Services/SysmonCatalog.js" as SysmonCatalog
 
 var PIN_KEYS = ["brightnessDevicePins", "wifiNetworkPins", "bluetoothDevicePins", "audioInputDevicePins", "audioOutputDevicePins"];
 
@@ -83,7 +84,7 @@ function migrateBatteryPillStyle(target) {
         target.batteryStyle = "solid";
 }
 
-// Migration: can be removed after a few releases. v47: battery widget styles fold into icon/solid/circle with an own
+// Migration: can be removed after a few releases. v50: battery widget styles fold into icon/solid/circle with an own
 // direction, and the plain "theme" color became "lowcharging".
 var BATTERY_STYLE_FOLDS = { solid: "solid", outline: "solid", ring: "circle", duo: "circle" };
 
@@ -859,11 +860,167 @@ function migrateToVersion(obj, targetVersion) {
     }
 
     if (currentVersion < 47 && targetVersion >= 47) {
-        migrateBatteryWidget(settings);
+        if (Array.isArray(settings.controlCenterWidgets) && settings.controlCenterColumns === undefined)
+            settings.controlCenterColumns = 8;
         settings.configVersion = 47;
     }
 
+    if (currentVersion < 48 && targetVersion >= 48) {
+        migrateDashSystemMonitorCards(settings);
+        settings.configVersion = 48;
+    }
+
+    if (currentVersion < 49 && targetVersion >= 49) {
+        migrateBarSystemMonitors(settings);
+        settings.configVersion = 49;
+    }
+
+    if (currentVersion < 50 && targetVersion >= 50) {
+        migrateBatteryWidget(settings);
+        settings.configVersion = 50;
+    }
+
     return settings;
+}
+
+const isObject = value => !!value && typeof value === "object" && !Array.isArray(value);
+
+// Migration: can be removed after a few releases. v49: the CPU, memory, disk, temperature and network bar widgets become sysmon widgets.
+function migrateBarSystemMonitors(settings) {
+    const OLD_IDS = WidgetDefaults.SYSMON_LEGACY_IDS;
+    const DROPPED = ["minimumWidth", "showSwap", "mountPath", "showMountPath", "pciId", "device", "vals", "mount", "metrics", "showInGb", "diskUsageMode", "compactMode", "hideWhenIdle"];
+    const convert = (raw, idKey) => {
+        const id = typeof raw === "string" ? raw : isObject(raw) ? (typeof raw[idKey] === "string" ? raw[idKey] : raw.id) : "";
+        if (OLD_IDS.indexOf(id) === -1)
+            return raw;
+        const old = typeof raw === "string" ? { enabled: true } : raw;
+        const entry = Object.assign({}, old);
+        entry[typeof raw === "string" || typeof old[idKey] === "string" ? idKey : "id"] = "sysmon";
+        for (const key of DROPPED)
+            delete entry[key];
+        entry.popout = "processes";
+        const one = (device, vals, extra) => [Object.assign({ device: device, vals: vals }, extra)];
+        switch (id) {
+        case "cpuUsage":
+            entry.metrics = one("cpu", ["usage"]);
+            break;
+        case "memUsage":
+            entry.metrics = one("memory", old.showSwap === true ? ["used", "swap"] : ["used"], old.showInGb === true ? { percent: false } : {});
+            break;
+        case "diskUsage":
+            entry.metrics = one("disk", ["space"], Object.assign({ mount: typeof old.mountPath === "string" && old.mountPath[0] === "/" && !/[\u0000-\u001f\u007f]/.test(old.mountPath) ? old.mountPath : "/" }, Number.isInteger(old.diskUsageMode) && old.diskUsageMode > 0 ? { diskMode: old.diskUsageMode } : {}));
+            entry.label = old.showMountPath !== false ? "both" : "icon";
+            break;
+        case "cpuTemp":
+            entry.metrics = one("cpu", ["temp"]);
+            break;
+        case "gpuTemp":
+            entry.selectedGpuIndex = Number.isInteger(old.selectedGpuIndex) && old.selectedGpuIndex >= 0 ? old.selectedGpuIndex : 0;
+            if (typeof old.pciId === "string" && SysmonCatalog.typeOf("gpu:" + old.pciId) === "gpu")
+                entry.pciId = old.pciId;
+            break;
+        case "network_speed_monitor":
+            entry.metrics = one("net", ["down", "up"], Object.assign(old.compactMode === true ? { compact: true } : {}, old.hideWhenIdle === true ? { hideIdle: true } : {}));
+            break;
+        }
+        return entry;
+    };
+    eachSysmonList(settings, (list, idKey) => {
+        for (let i = 0; i < list.length; i++)
+            list[i] = convert(list[i], idKey);
+    });
+}
+
+// Calls visit(list, idKey) for every widget list that can hold a bar widget: bars, island layouts and docks.
+function eachSysmonList(settings, visit) {
+    const visitList = (list, idKey) => {
+        if (Array.isArray(list))
+            visit(list, idKey || "id");
+    };
+    for (const bar of Array.isArray(settings.barConfigs) ? settings.barConfigs : []) {
+        if (!isObject(bar))
+            continue;
+        visitList(bar.islandHomeLayout);
+        for (const listKey of BAR_WIDGET_LIST_KEYS) {
+            visitList(bar[listKey]);
+            for (const widget of Array.isArray(bar[listKey]) ? bar[listKey] : []) {
+                if (isObject(widget) && widget.id === "island")
+                    visitList(widget.islandHomeLayout);
+            }
+        }
+    }
+    for (const dock of Array.isArray(settings.dockConfigs) ? settings.dockConfigs : [])
+        visitList(isObject(dock) ? dock.widgets : null, "widgetId");
+}
+
+function isPendingGpu(entry, idKey) {
+    return isObject(entry) && entry[idKey] === "sysmon" && !SysmonCatalog.listOf(entry.metrics) && Number.isInteger(entry.selectedGpuIndex);
+}
+
+function hasPendingSysmonGpus(settings) {
+    let pending = false;
+    eachSysmonList(settings, (list, idKey) => {
+        pending = pending || list.some(entry => isPendingGpu(entry, idKey));
+    });
+    return pending;
+}
+
+// Saves the device key of each migrated GPU widget still waiting on the GPU list. Returns whether anything changed.
+function resolveSysmonGpus(settings, gpus) {
+    let changed = false;
+    eachSysmonList(settings, (list, idKey) => {
+        for (const entry of list) {
+            if (!isPendingGpu(entry, idKey))
+                continue;
+            const key = SysmonCatalog.legacyGpuKey(entry, gpus);
+            if (!key)
+                continue;
+            entry.metrics = [{ device: key, vals: ["temp"] }];
+            delete entry.selectedGpuIndex;
+            delete entry.pciId;
+            changed = true;
+        }
+    });
+    return changed;
+}
+
+// Migration: can be removed after a few releases. v48: the CPU, Memory, Disk, Network and System Monitor dash cards become System monitor cards.
+function migrateDashSystemMonitorCards(settings) {
+    const optionsRoot = settings.dashOptions && typeof settings.dashOptions === "object" && !Array.isArray(settings.dashOptions) ? settings.dashOptions : {};
+    const optionsFor = id => optionsRoot[id] && typeof optionsRoot[id] === "object" && !Array.isArray(optionsRoot[id]) ? optionsRoot[id] : {};
+    const tiles = (id, metric) => {
+        const opts = optionsFor(id);
+        metric.graph = opts.trend !== false;
+        metric.on = true;
+        return { layout: "tiles", style: "icon", graphInterval: 300, metrics: [metric] };
+    };
+    const builders = {
+        cpu: () => tiles("cpu", { device: "cpu", vals: optionsFor("cpu").temperature !== false ? ["usage", "temp"] : ["usage"] }),
+        memory: () => tiles("memory", { device: "memory", vals: optionsFor("memory").swap === true ? ["used", "swap"] : ["used"] }),
+        network: () => tiles("network", { device: "net", vals: ["down", "up"] }),
+        disk: () => tiles("disk", { device: "disk", vals: optionsFor("disk").io === true ? ["space", "read"] : ["space"], mount: "/" }),
+        sysmon: () => ({
+            layout: "bars", style: "icon", metrics: [
+                { device: "cpu", vals: optionsFor("sysmon").temperature !== false ? ["usage", "temp"] : ["usage"], graph: false, on: true },
+                { device: "memory", vals: ["used"], graph: false, on: true }
+            ]
+        })
+    };
+    if (Array.isArray(settings.dashCards)) {
+        settings.dashCards = settings.dashCards.map((card, index) => {
+            if (!card || typeof card !== "object" || typeof card.id !== "string" || !Object.prototype.hasOwnProperty.call(builders, card.id))
+                return card;
+            if (card.id === "sysmon" && card.config && typeof card.config === "object")
+                return card;
+            const config = builders[card.id]();
+            const tone = optionsFor(card.id).tone;
+            if (tone === "primary" || tone === "secondary" || tone === "tertiary")
+                config.tone = tone;
+            return Object.assign({}, card, { id: "sysmon", instanceId: card.id + "-" + index, config: config });
+        });
+    }
+    for (const id of Object.keys(builders))
+        delete optionsRoot[id];
 }
 
 // v45: millisecond animation durations became steps of the M3 Expressive spec, -1 is off and 0..4 are 250/375/500/750/1000 ms

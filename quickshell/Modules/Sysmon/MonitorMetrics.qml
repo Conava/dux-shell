@@ -7,12 +7,10 @@ import qs.Modules.ControlCenter
 import qs.Modules.DDash
 
 Singleton {
-    readonly property real gaugeSize: DashMetrics.gaugeSize
-    readonly property real gaugeSizeHero: DashMetrics.gaugeSizeHero
-    readonly property real tileTrendRatio: DashMetrics.tileTrendRatio
-    readonly property real tileTrendFillAlpha: DashMetrics.tileTrendFillAlpha
+    readonly property real tileTrendRatio: 0.45
+    readonly property real tileTrendFillAlpha: 0.1
     readonly property real tileValueSizeCompact: DashMetrics.tileValueSizeCompact
-    readonly property int meterDuration: DashMetrics.meterDuration
+    readonly property int meterDuration: Theme.expressiveDurations.expressiveSlowEffects
     readonly property bool animationsEnabled: CcMetrics.animationsEnabled
 
     readonly property real wideThreshold: DashMetrics.gridRowUnit * 2
@@ -63,7 +61,15 @@ Singleton {
             "temp": "100°",
             "clock": "0.0",
             "power": "000 W",
-            "rate": "999K"
+            "rate": "999M"
+        })
+
+    // Widest sizes and compact rate the bar widget formats, for the width it reserves.
+    readonly property var sizeSamples: ({
+            "bytes": "1000.0 MiB",
+            "mount": "1000.0G",
+            "drive": "1000 GB",
+            "compactRate": "888 MB/s"
         })
 
     // Tile extras only pick how many fit, so they plan on two digits; a rare third one runs into the tile's padding.

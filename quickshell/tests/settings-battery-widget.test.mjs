@@ -5,7 +5,7 @@ import { loadScript } from "./qml-script.mjs";
 const store = loadScript(new URL("../Common/settings/SettingsStore.js", import.meta.url));
 
 const plain = (value) => JSON.parse(JSON.stringify(value));
-const migrate = (settings) => plain(store.migrateToVersion(Object.assign({ configVersion: 46 }, settings), 47));
+const migrate = (settings) => plain(store.migrateToVersion(Object.assign({ configVersion: 49 }, settings), 50));
 const bar = (position, widgets, extra = {}) => Object.assign({ id: "default", position, leftWidgets: [], centerWidgets: [], rightWidgets: widgets }, extra);
 
 test("a saved theme color becomes low and charging, level and a missing key stay", () => {
@@ -13,7 +13,7 @@ test("a saved theme color becomes low and charging, level and a missing key stay
     assert.equal(result.barConfigs[0].batteryColorMode, "lowcharging");
     assert.equal(result.barConfigs[1].batteryColorMode, "level");
     assert.equal("batteryColorMode" in result.barConfigs[2], false);
-    assert.equal(result.configVersion, 47);
+    assert.equal(result.configVersion, 50);
 });
 
 test("old styles fold into solid and circle and keep the meter orientation of the bar", () => {
@@ -54,7 +54,7 @@ test("dock widgets follow the dock position", () => {
 
 test("running twice changes nothing and partial or foreign shapes do not throw", () => {
     const once = migrate({ barConfigs: [bar(2, [{ id: "battery", batteryStyle: "duo" }], { batteryColorMode: "theme" })] });
-    assert.deepEqual(plain(store.migrateToVersion(Object.assign({}, once, { configVersion: 46 }), 47)), once);
+    assert.deepEqual(plain(store.migrateToVersion(Object.assign({}, once, { configVersion: 49 }), 50)), once);
     for (const settings of [{}, { barConfigs: {} }, { barConfigs: [null, 3, { rightWidgets: "x" }, { rightWidgets: [null, 1] }] }, { dockConfigs: [null, { widgets: 5 }] }])
         assert.doesNotThrow(() => migrate(settings));
 });

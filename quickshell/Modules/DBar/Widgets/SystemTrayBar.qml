@@ -56,10 +56,22 @@ BasePill {
         return TrayMenuManager.iconSourceFor(trayItem);
     }
 
+    function endBarHover() {
+        const screenName = root.parentScreen?.name;
+        if (screenName)
+            PopoutManager.popoutToggledClosed(screenName);
+    }
+
+    function cancelHoverOnPress(mouse) {
+        if (mouse.button === Qt.LeftButton && !trayMenuState.showMenu)
+            root.endBarHover();
+    }
+
     function activateInlineTrayItem(trayItem, anchorItem) {
         if (!trayItem)
             return;
         if (!trayItem.onlyMenu) {
+            root.endBarHover();
             trayItem.activate();
             return;
         }
@@ -323,37 +335,7 @@ BasePill {
     readonly property bool hasHiddenItems: hiddenBarItems.length > 0
     readonly property bool inlineExpanded: hasHiddenItems && !useOverflowPopup && menuOpen
     visible: allTrayItems.length > 0
-    opacity: allTrayItems.length > 0 ? 1 : 0
-
-    states: [
-        State {
-            name: "hidden_horizontal"
-            when: allTrayItems.length === 0 && !isVerticalOrientation
-            PropertyChanges {
-                target: root
-                width: 0
-            }
-        },
-        State {
-            name: "hidden_vertical"
-            when: allTrayItems.length === 0 && isVerticalOrientation
-            PropertyChanges {
-                target: root
-                height: 0
-            }
-        }
-    ]
-
-    transitions: [
-        Transition {
-            NumberAnimation {
-                properties: "width,height"
-                duration: Theme.expressiveDurations.expressiveDefaultSpatial
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Theme.expressiveCurves.expressiveDefaultSpatial
-            }
-        }
-    ]
+    opacity: visible ? 1 : 0
 
     Behavior on opacity {
         NumberAnimation {
@@ -365,6 +347,8 @@ BasePill {
 
     readonly property real trayIconSize: Theme.barIconSize(root.barThickness, undefined, root.barConfig?.maximizeWidgetIcons, root.barConfig?.iconScale)
     readonly property real trayItemSize: trayIconSize + Theme.spacingXS + Theme.spacingXXS
+    readonly property int _baseSlotCount: displayedMainBarItems.length + (hasHiddenItems ? 1 : 0)
+    readonly property real _basePrimarySize: _baseSlotCount > 0 ? (_baseSlotCount * trayItemSize + Math.max(0, _baseSlotCount - 1) * configuredIconSpacing) : 0
 
     readonly property string autoBarShadowDirection: {
         const edge = root.axis?.edge;
@@ -485,8 +469,16 @@ BasePill {
 
     content: Component {
         Item {
-            implicitWidth: layoutLoader.item ? layoutLoader.item.implicitWidth : 0
-            implicitHeight: layoutLoader.item ? layoutLoader.item.implicitHeight : 0
+            readonly property var layoutItem: layoutLoader.item
+
+            function resolvedImplicitSize(primaryAxis, measured) {
+                if (root.allTrayItems.length === 0)
+                    return 0;
+                return Math.max(primaryAxis ? root._basePrimarySize : 0, measured ?? 0);
+            }
+
+            implicitWidth: resolvedImplicitSize(!root.isVerticalOrientation, layoutItem?.implicitWidth)
+            implicitHeight: resolvedImplicitSize(root.isVerticalOrientation, layoutItem?.implicitHeight)
 
             Loader {
                 id: layoutLoader
@@ -647,6 +639,7 @@ BasePill {
                 onPressed: mouse => {
                     const pos = mapToItem(inlineVisualContent, mouse.x, mouse.y);
                     inlineItemRipple.trigger(pos.x, pos.y);
+                    root.cancelHoverOnPress(mouse);
                 }
 
                 onClicked: mouse => {
@@ -767,6 +760,7 @@ BasePill {
                 onPressed: mouse => {
                     const pos = mapToItem(visualContent, mouse.x, mouse.y);
                     itemRipple.trigger(pos.x, pos.y);
+                    root.cancelHoverOnPress(mouse);
                     if (mouse.button === Qt.LeftButton) {
                         dragHandler.dragStartPos = Qt.point(mouse.x, mouse.y);
                         longPressTimer.start();
@@ -789,6 +783,7 @@ BasePill {
                     if (!delegateRoot.trayItem)
                         return;
                     if (!delegateRoot.trayItem.onlyMenu) {
+                        root.endBarHover();
                         delegateRoot.trayItem.activate();
                         return;
                     }
@@ -1079,7 +1074,10 @@ BasePill {
             TrayMenuManager.registerMenu(screen.name, root.trayMenuPopout());
 
         trayMenuState.showMenu = true;
-        PopoutManager.requestPopout(root.trayMenuPopout(), undefined, "tray-menu-" + (item?.id ?? ""));
+        if (byHover)
+            PopoutManager.requestHoverPopout(root.trayMenuPopout(), undefined, "tray-menu-" + (item?.id ?? ""));
+        else
+            PopoutManager.requestPopout(root.trayMenuPopout(), undefined, "tray-menu-" + (item?.id ?? ""));
     }
 
     function showForTrayItem(item, anchor, screen, atBottom, vertical, axisObj, byHover) {
@@ -1093,11 +1091,7 @@ BasePill {
     }
 
     function _trayLayoutRoot() {
-        const contentChildren = root.visualContent?.children;
-        if (!contentChildren || contentChildren.length === 0)
-            return null;
-        const contentRoot = contentChildren[0];
-        return contentRoot?.layoutLoader?.item || null;
+        return root.contentItem?.layoutItem || null;
     }
 
     function _trayHitAtGlobalPoint(gx, gy) {
@@ -1126,6 +1120,8 @@ BasePill {
     }
 
     function hoverTriggerAtGlobalPoint(gx, gy) {
+        if (draggedIndex >= 0)
+            return "";
         const hit = _trayHitAtGlobalPoint(gx, gy);
         if (!hit?.trayItem?.hasMenu)
             return "";
@@ -1133,6 +1129,8 @@ BasePill {
     }
 
     function openHoverAtGlobalPoint(gx, gy) {
+        if (draggedIndex >= 0)
+            return false;
         const hit = _trayHitAtGlobalPoint(gx, gy);
         if (!hit?.trayItem?.hasMenu)
             return false;

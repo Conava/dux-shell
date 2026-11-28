@@ -47,6 +47,8 @@ Singleton {
     property var powerMenuModalLoader: null
     property var powerMenuPopout: null
     property var powerMenuPopoutLoader: null
+    property var profilePickerModal: null
+    property var profilePickerModalLoader: null
     property var switchUserModalLoader: null
     property var durationPopout: null
     property var durationPopoutLoader: null
@@ -168,6 +170,25 @@ Singleton {
         };
     }
 
+    function dashIslandActivity(tabId) {
+        switch (tabId) {
+        case "overview":
+            return "home";
+        case "media":
+        case "wallpaper":
+        case "weather":
+        case "profiles":
+            return tabId;
+        default:
+            return "";
+        }
+    }
+
+    function dashRoutesToIsland(tabId, screen) {
+        const activity = dashIslandActivity(tabId);
+        return activity !== "" && _sharedTriggerIsland(screen, activity) !== null;
+    }
+
     readonly property bool islandControlCenterOpen: dankIslandRouter?.controlCenterOpen ?? false
 
     function routeToIsland(activityId, screen, shouldToggle, section, barId) {
@@ -263,9 +284,18 @@ Singleton {
         }
     }
 
+    // An open popout keeps its style, so a toggle closes what is shown.
+    function _prepareProcessList(x, y, width, section, screen) {
+        if (!processListPopout.shouldBeVisible)
+            processListPopout.configure({
+                style: "processes"
+            });
+        setPosition(processListPopout, x, y, width, section, screen);
+    }
+
     function openProcessList(x, y, width, section, screen) {
         if (processListPopout) {
-            setPosition(processListPopout, x, y, width, section, screen);
+            _prepareProcessList(x, y, width, section, screen);
             processListPopout.open();
         }
     }
@@ -280,7 +310,7 @@ Singleton {
 
     function toggleProcessList(x, y, width, section, screen) {
         if (processListPopout) {
-            setPosition(processListPopout, x, y, width, section, screen);
+            _prepareProcessList(x, y, width, section, screen);
             processListPopout.toggle();
         }
     }
@@ -1020,6 +1050,17 @@ Singleton {
         _powerMenuModalItem()?.openCentered();
     }
 
+    function toggleProfilePicker() {
+        const modal = profilePickerModalLoader?.item ?? profilePickerModal;
+        if (modal?.shouldBeVisible) {
+            modal.close();
+            return;
+        }
+        if (profilePickerModalLoader)
+            profilePickerModalLoader.active = true;
+        (profilePickerModalLoader?.item ?? profilePickerModal)?.openOn(CompositorService.getFocusedScreen(), SettingsData.configProfilePickerView);
+    }
+
     function openSwitchUser() {
         if (!switchUserModalLoader)
             return;
@@ -1064,13 +1105,14 @@ Singleton {
         }
     }
 
-    function showProcessListModal() {
-        if (processListModal) {
-            processListModal.show();
-        } else if (processListModalLoader) {
+    function showProcessListModal(target) {
+        const open = () => target ? processListModal?.showPage(target) : processListModal?.show();
+        if (!processListModal && processListModalLoader)
             processListModalLoader.active = true;
-            Qt.callLater(() => processListModal?.show());
-        }
+        if (processListModal)
+            open();
+        else
+            Qt.callLater(open);
     }
 
     function hideProcessListModal() {

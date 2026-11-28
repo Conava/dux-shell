@@ -287,11 +287,22 @@ func TestRebootPackages(t *testing.T) {
 		{Name: "linux-zen", Repo: RepoSystem}, {Name: "kernel-core", Repo: RepoSystem}, {Name: "linux-image-6.12.0-amd64", Repo: RepoSystem},
 		{Name: "systemd", Repo: RepoSystem}, {Name: "glibc", Repo: RepoSystem}, {Name: "firefox", Repo: RepoSystem},
 		{Name: "linux-headers", Repo: RepoAUR}, {Name: "kernel-tools", Repo: RepoSystem},
+		{Name: "glibc", Repo: RepoHomebrew}, {Name: "mesa", Repo: RepoHomebrew},
 	}
 	got := rebootPackages(pkgs)
 	want := []string{"linux-zen", "kernel-core", "linux-image-6.12.0-amd64", "systemd", "glibc", "kernel-tools"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("rebootPackages = %v, want %v", got, want)
+	}
+	markRebootPackages(pkgs)
+	var marked []string
+	for _, p := range pkgs {
+		if p.NeedsReboot {
+			marked = append(marked, p.Name)
+		}
+	}
+	if strings.Join(marked, ",") != strings.Join(want, ",") {
+		t.Errorf("marked = %v, want %v", marked, want)
 	}
 }
 

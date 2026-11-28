@@ -1,5 +1,17 @@
 .pragma library
 
+// Bar widget ids that settings v49 merged into one sysmon widget.
+var SYSMON_LEGACY_IDS = ["cpuUsage", "memUsage", "diskUsage", "cpuTemp", "gpuTemp", "network_speed_monitor"];
+
+var SYSMON_LEGACY_TYPES = {
+    cpuUsage: "cpu",
+    cpuTemp: "cpu",
+    memUsage: "memory",
+    diskUsage: "disk",
+    gpuTemp: "gpu",
+    network_speed_monitor: "net"
+};
+
 var CONTROL_CENTER_GROUP_ORDER = ["network", "vpn", "bluetooth", "audio", "microphone", "brightness", "battery", "printer", "screenSharing", "idleInhibitor", "doNotDisturb"];
 
 // Island-layout bars and dots keep these keys on the bar config; the island widget carries them on its entry.
@@ -75,6 +87,7 @@ var ISLAND_DEFAULTS = {
     islandSatelliteGothCorners: true,
     islandSatelliteFollowInterfaceStyle: true,
     islandSatelliteTransparency: 1,
+    islandScrollEmptyStrip: true,
     islandSpringStiffness: 600,
     islandSpringDamping: 49,
     islandSpringMass: 1
@@ -117,6 +130,7 @@ var DEFAULTS = {
         workspaceMoveToOutput: false,
         showOccupiedWorkspacesOnly: false,
         showSpecialWorkspaces: false,
+        scrollEnabled: true,
         reverseScrolling: false,
         dwlShowAllTags: false,
         workspaceActiveAppHighlightEnabled: false,
@@ -150,6 +164,7 @@ var DEFAULTS = {
     clock: {
         clockCompactMode: false,
         clockDateOrder: "timeFirst",
+        clockShowTimezone: false,
         clockNotificationBadge: false,
         clockClickAction: "dash",
         clockClickCommand: ""
@@ -179,7 +194,8 @@ var DEFAULTS = {
         runningAppsCompactMode: true,
         runningAppsGroupByApp: false,
         runningAppsCurrentWorkspace: true,
-        runningAppsCurrentMonitor: false
+        runningAppsCurrentMonitor: false,
+        scrollEnabled: true
     },
     appsDock: {
         barMaxVisibleApps: 0,
@@ -219,7 +235,8 @@ var DEFAULTS = {
         showBatteryTimeOnlyOnBattery: false,
         showBatteryPowerCharging: false,
         showBatteryPowerDischarging: false,
-        batteryStyle: "solid"
+        batteryStyle: "solid",
+        scrollEnabled: true
     },
     controlCenterButton: {
         showNetworkIcon: true,
@@ -236,6 +253,7 @@ var DEFAULTS = {
         showScreenSharingIcon: true,
         showIdleInhibitorIcon: false,
         showDoNotDisturbIcon: false,
+        scrollEnabled: true,
         controlCenterGroupOrder: CONTROL_CENTER_GROUP_ORDER
     },
     privacyIndicator: {
@@ -248,34 +266,20 @@ var DEFAULTS = {
         keyboardLayoutNameShowIcon: false,
         keyboardLayoutNameLabelOverrides: {}
     },
-    cpuUsage: {
-        minimumWidth: true
-    },
-    cpuTemp: {
-        minimumWidth: true
-    },
-    memUsage: {
-        minimumWidth: true,
-        showSwap: false,
-        showInGb: false
-    },
-    gpuTemp: {
-        minimumWidth: true,
-        selectedGpuIndex: 0,
-        pciId: ""
-    },
-    diskUsage: {
-        minimumWidth: true,
-        mountPath: "/",
-        diskUsageMode: 0,
-        showMountPath: true
-    },
-    network_speed_monitor: {
-        hideWhenIdle: false,
-        compactMode: false
+    sysmon: {
+        metrics: [{ device: "cpu", vals: ["usage"], graph: false, on: true }],
+        separator: "gap",
+        popout: "compact",
+        style: "icon",
+        label: "icon",
+        colorMode: "default",
+        customColor: "#ffffff"
     },
     systemUpdate: {
         hideWhenIdle: false
+    },
+    notificationButton: {
+        hideWhenEmpty: false
     }
 };
 

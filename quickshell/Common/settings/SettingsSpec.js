@@ -179,6 +179,10 @@ var LOCAL_SPEC = {
         def: -1,
         onChange: "updateCompositorLayout"
     },
+    niriLayoutTransparentBackdrop: {
+        def: false,
+        onChange: "updateCompositorLayout"
+    },
     compositorAnimationPreset: {
         def: "dms",
         onChange: "updateCompositorAnimations"
@@ -406,6 +410,22 @@ var LOCAL_SPEC = {
     },
     focusFollowsMouse: {
         def: -1,
+        onChange: "updateCompositorInput"
+    },
+    niriFocusFollowsMouseOutputsOnly: {
+        def: false,
+        onChange: "updateCompositorInput"
+    },
+    niriTabletMapToFocusedWindow: {
+        def: false,
+        onChange: "updateCompositorInput"
+    },
+    niriTabletMapToOutput: {
+        def: "",
+        onChange: "updateCompositorInput"
+    },
+    niriTabletLeftHanded: {
+        def: false,
         onChange: "updateCompositorInput"
     },
     hyprlandSwallowFocusClick: {
@@ -662,7 +682,7 @@ var LOCAL_SPEC = {
         def: 135
     },
     controlCenterColumns: {
-        def: 8
+        def: 7
     },
     controlCenterRows: {
         def: 0,
@@ -680,7 +700,7 @@ var LOCAL_SPEC = {
             {
                 id: "user",
                 enabled: true,
-                w: 5,
+                w: 4,
                 h: 1
             },
             {
@@ -707,81 +727,88 @@ var LOCAL_SPEC = {
             {
                 id: "brightnessSlider",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1,
                 small: true
             },
             {
                 id: "volumeSlider",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1,
                 small: true
             },
             {
                 id: "wifi",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1
             },
             {
                 id: "bluetooth",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1
             },
             {
                 id: "audioOutput",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1
             },
             {
                 id: "audioInput",
                 enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1
             },
             {
-                id: "darkMode",
+                id: "airplaneMode",
                 enabled: true,
-                w: 2,
-                h: 1
-            },
-            {
-                id: "nightMode",
-                enabled: true,
-                w: 2,
-                h: 1
-            },
-            {
-                id: "doNotDisturb",
-                enabled: true,
-                w: 2,
-                h: 1
-            },
-            {
-                id: "idleInhibitor",
-                enabled: true,
-                w: 2,
-                h: 1
-            },
-            {
-                id: "battery",
-                enabled: true,
-                w: 4,
+                w: 3.5,
                 h: 1
             },
             {
                 id: "diskUsage",
                 enabled: true,
-                w: 4,
+                w: 3.5,
+                h: 1
+            },
+            {
+                id: "doNotDisturb",
+                enabled: true,
+                w: 3.5,
+                h: 1
+            },
+            {
+                id: "idleInhibitor",
+                enabled: true,
+                w: 3.5,
+                h: 1
+            },
+            {
+                id: "nightMode",
+                enabled: true,
+                w: 3.5,
+                h: 1
+            },
+            {
+                id: "darkMode",
+                enabled: true,
+                w: 3.5,
                 h: 1
             },
             {
                 id: "runningApps",
                 enabled: true,
-                w: 7,
+                w: 5,
+                h: 1,
+                small: true
+            },
+            {
+                id: "colorPicker",
+                enabled: true,
+                w: 1,
                 h: 1,
                 small: true
             },
@@ -900,6 +927,15 @@ var LOCAL_SPEC = {
     },
     browserPickerViewMode: {
         def: "grid"
+    },
+    configProfilePickerView: {
+        def: "carousel"
+    },
+    configProfileSwitchTransition: {
+        def: "wallpaper"
+    },
+    configProfileSwitchDuration: {
+        def: 1000
     },
     appPickerViewMode: {
         def: "grid"
@@ -1025,6 +1061,10 @@ var LOCAL_SPEC = {
                 enabled: false
             },
             {
+                id: "profiles",
+                enabled: false
+            },
+            {
                 id: "settings",
                 enabled: false
             }
@@ -1070,6 +1110,36 @@ var LOCAL_SPEC = {
     },
     wellbeingAppLimits: {
         def: {}
+    },
+    wellbeingBreaksEnabled: {
+        def: false
+    },
+    wellbeingBreakInterval: {
+        def: 20
+    },
+    wellbeingBreakDuration: {
+        def: 20
+    },
+    wellbeingBreaksBeforeLong: {
+        def: 3
+    },
+    wellbeingLongBreakDuration: {
+        def: 5
+    },
+    wellbeingBreakWarning: {
+        def: 5
+    },
+    wellbeingBreakSuppressFullscreen: {
+        def: true
+    },
+    wellbeingBreakSuppressMeetings: {
+        def: true
+    },
+    wellbeingBreakPauseMedia: {
+        def: false
+    },
+    wellbeingBreakSound: {
+        def: true
     },
     networkPreference: {
         def: "auto"
@@ -1563,6 +1633,15 @@ var LOCAL_SPEC = {
     lockScreenInactiveColor: {
         def: "#000000"
     },
+    lockScreenBlurInactiveBackground: {
+        def: false
+    },
+    lockScreenBlurStrength: {
+        def: 80
+    },
+    lockScreenScrimOpacity: {
+        def: 40
+    },
     lockScreenVideoEnabled: {
         def: false
     },
@@ -1628,6 +1707,10 @@ var LOCAL_SPEC = {
     },
     notificationDndWhileScreenSharing: {
         def: true
+    },
+    notificationHideFromScreenShare: {
+        def: true,
+        onChange: "updateCompositorLayout"
     },
     notificationFocusedMonitor: {
         def: false
@@ -1747,6 +1830,9 @@ var LOCAL_SPEC = {
     updaterIncludeFlatpak: {
         def: true
     },
+    updaterIncludeHomebrew: {
+        def: true
+    },
     updaterAllowAUR: {
         def: true
     },
@@ -1794,7 +1880,7 @@ var LOCAL_SPEC = {
                 showOnLastDisplay: true,
                 leftWidgets: ["launcherButton", "workspaceSwitcher", "focusedWindow"],
                 centerWidgets: ["music", "clock", "weather"],
-                rightWidgets: ["systemTray", "clipboard", "cpuUsage", "memUsage", "notificationButton", "battery", "controlCenterButton"],
+                rightWidgets: ["systemTray", "clipboard", { id: "sysmon", enabled: true, metrics: [{ device: "cpu", vals: ["usage"] }, { device: "memory", vals: ["used"] }], separator: "separate" }, "notificationButton", "battery", "controlCenterButton"],
                 spacing: 4,
                 innerPadding: 2,
                 barInsetPadding: -1,
@@ -1844,6 +1930,9 @@ var LOCAL_SPEC = {
                 scrollEnabled: true,
                 scrollXBehavior: "focusWindow",
                 scrollYBehavior: "workspace",
+                scrollBrightnessStep: 5,
+                scrollExtendToEdge: true,
+                avoidNotch: true,
                 middleClickAction: "none",
                 rightClickAction: "edit-widgets",
                 clickActionFollowMouse: false,

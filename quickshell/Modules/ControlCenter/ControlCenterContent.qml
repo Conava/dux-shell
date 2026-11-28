@@ -14,6 +14,7 @@ import "./utils/widgets.js" as WidgetUtils
 import "./utils/pages.js" as Pages
 import "../../Common/GridLayout.js" as GridUtils
 import "../../Common/ControlCenterLayout.js" as PanelLayout
+import "../../Common/EditHistory.js" as EditHistory
 
 FocusScope {
     id: root
@@ -61,8 +62,14 @@ FocusScope {
     // A height drag previews from its grab snapshot and saves only on release.
     readonly property var layoutWidgets: {
         const base = resizeBase?.vertical ? resizeBase.widgets : SettingsData.controlCenterWidgets || [];
-        return fixedHeight ? rowLayout(base, gridColumns, fixedRows, (resizeBase?.vertical ?? false) && fixedRows > resizeBase.rows) : base;
+        if (!fixedHeight)
+            return base;
+        if (heightShrinking)
+            return rowLayout(base, gridColumns, resizeBase.rows);
+        return rowLayout(base, gridColumns, fixedRows, (resizeBase?.vertical ?? false) && fixedRows > resizeBase.rows);
     }
+    // Shrinking keeps the grab's pages so cut tiles visibly leave; release repaginates.
+    readonly property bool heightShrinking: (resizeBase?.vertical ?? false) && fixedRows < resizeBase.rows
     readonly property int usedPageCount: Pages.pageCount(layoutWidgets, widget => widgetModel.isTileShown(widget))
     // Edit mode adds an empty page after the last used one to drop or add on.
     readonly property int pageCount: usedPageCount + (host.editMode ? 1 : 0)
@@ -121,14 +128,22 @@ FocusScope {
     readonly property var addHint: addSpot ?? addPin
 
     // A function, so plugin widget components are only instantiated once a sheet or panel asks.
+    // Placed widgets stay listed, marked `added`.
     function addableWidgets(fitSpot = false) {
         const existingIds = placedWidgetIds.split(",");
         const allWidgets = widgetModel.baseWidgetDefinitions.concat(widgetModel.getPluginWidgets());
-        return allWidgets.filter(widget => {
-            if (!widget.allowMultiple && existingIds.includes(widget.id))
-                return false;
-            return !fitSpot || canAddAtPin(widget.id);
-        });
+        const result = [];
+        for (const widget of allWidgets) {
+            if (!widget.allowMultiple && existingIds.includes(widget.id)) {
+                result.push(Object.assign({}, widget, {
+                    "added": true
+                }));
+                continue;
+            }
+            if (!fitSpot || canAddAtPin(widget.id))
+                result.push(widget);
+        }
+        return result;
     }
 
     function canAddAtPin(widgetId) {
@@ -146,16 +161,11 @@ FocusScope {
     readonly property real targetImplicitHeight: CcMetrics.gridVerticalPadding + (fixedHeight ? Math.max(fixedGridHeight, gridDragging ? heldGridHeight : gridTargetHeight) : gridDragging ? heldGridHeight : gridTargetHeight)
     readonly property bool contentOverflows: targetImplicitHeight > (host.availableHeight ?? Infinity)
     property Item detailReturnFocus: null
-    // One string so Discard and undo can compare and restore the whole session state at once.
-    readonly property string editState: JSON.stringify({
-        "widgets": SettingsData.controlCenterWidgets || [],
-        "columns": SettingsData.controlCenterColumns,
-        "rows": SettingsData.controlCenterRows
-    })
+    readonly property var editKeys: ["controlCenterWidgets", "controlCenterColumns", "controlCenterRows"]
+    readonly property string editState: EditHistory.snapshot(SettingsData, editKeys)
     property string editSnapshot: ""
     property string undoBase: ""
     property var undoStack: []
-    readonly property int undoLimit: 50
     property bool undoBatching: false
     property int rowPreview: -1
     property var resizeBase: null
@@ -292,7 +302,9 @@ FocusScope {
 
     // Only a popout the screen has capped scrolls; otherwise it grows around the band and any scroll would bounce.
     function revealDetail() {
-        if (detailBand.section === "" || !contentOverflows)
+        if (detailBand.section === "" || !contentOverflows || detailBand.transitioning)
+            return;
+        if (contentFlickable.contentHeight <= contentFlickable.height)
             return;
         const top = mainColumn.y + body.y + detailBand.y;
         contentFlickable.revealRange(top, top + detailBand.height);
@@ -346,17 +358,9 @@ FocusScope {
     }
 
     function applyEditState(state) {
-        if (state === "")
-            return;
-        const wanted = JSON.parse(state);
         const batching = undoBatching;
         undoBatching = true;
-        if (JSON.stringify(SettingsData.controlCenterWidgets || []) !== JSON.stringify(wanted.widgets))
-            SettingsData.set("controlCenterWidgets", wanted.widgets);
-        if (SettingsData.controlCenterColumns !== wanted.columns)
-            SettingsData.set("controlCenterColumns", wanted.columns);
-        if (SettingsData.controlCenterRows !== wanted.rows)
-            SettingsData.set("controlCenterRows", wanted.rows);
+        EditHistory.restore(SettingsData, state, editKeys);
         undoBatching = batching;
     }
 
@@ -501,7 +505,7 @@ FocusScope {
         enforceFixedHeight();
         if (!host.editMode || editState === undoBase)
             return;
-        undoStack = undoStack.concat([undoBase]).slice(-undoLimit);
+        undoStack = EditHistory.push(undoStack, undoBase);
         undoBase = editState;
     }
 
@@ -517,7 +521,7 @@ FocusScope {
         undoBatching = false;
         if (editState === before)
             return;
-        undoStack = undoStack.concat([before]).slice(-undoLimit);
+        undoStack = EditHistory.push(undoStack, before);
         undoBase = editState;
     }
 
@@ -1122,6 +1126,7 @@ FocusScope {
                         columns: root.gridColumns
                         availableHeight: root.pageGridHeight
                         rowLimit: root.fixedHeight ? root.fixedRows : 0
+                        spillPreview: root.heightShrinking
                         // Short and empty pages must accept drops across the available panel height.
                         minimumHeight: Math.max(pager.height, contentFlickable.height - CcMetrics.sheetPadding)
                         editMode: root.host.editMode
@@ -1148,6 +1153,7 @@ FocusScope {
                         onRemoveWidget: index => widgetModel.removeWidget(index)
                         onConfigRequested: (index, widgetData, anchor, boundsItem) => root.openConfigOverlay(index, widgetData, anchor, boundsItem)
                         onColorPickerRequested: root.host.openColorPicker()
+                        onScreenshotRequested: mode => root.host.openScreenshot(mode)
                         onCloseRequested: root.host.close()
                         onSettingsRequested: root.host.openSettings()
                         onEditRequested: root.host.editMode = !root.host.editMode
@@ -1201,10 +1207,15 @@ FocusScope {
                     runningToplevels: root.runningToplevels
                     onCodecSelectorRequested: device => root.showCodecSelector(device)
                     onPortSelectorRequested: node => root.showPortSelector(node)
+                    onScreenshotRequested: (mode, keepOpen) => root.host.openScreenshot(mode, keepOpen)
                     onBackRequested: root.goBack()
                     onCollapseRequested: root.host.collapseAll()
                     onCloseRequested: root.host.close()
                     onHeightChanged: root.revealDetail()
+                    onTransitioningChanged: {
+                        if (!detailBand.transitioning)
+                            root.revealDetail();
+                    }
                     onDismissed: {
                         const target = root.detailReturnFocus;
                         root.detailReturnFocus = null;
@@ -1248,6 +1259,7 @@ FocusScope {
             width: mainColumn.width
             count: pager.count
             currentIndex: pager.currentIndex
+            position: pager.position
             // They share the bottom edge with the height handle, so they step aside while it drags.
             visible: count > 1 && !(root.panelResizing && (root.resizeBase?.vertical ?? false))
             opacity: body.opacity

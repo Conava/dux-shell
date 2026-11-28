@@ -49,7 +49,7 @@ test("identifier rules: niri appends the serial or Unknown, hyprland uses desc: 
 test("niri kdl parser: top-level off disables, nested off does not, on-demand vrr, raw transform spelling, max-bpc kept", () => {
     const parsed = plain(model.parseNiriOutputs(text("niri-outputs.kdl")));
     assert.deepEqual(Object.keys(parsed), ["DP-1", "HDMI-A-1", "eDP-1", "Dell Inc. DELL U2720Q ABC123"]);
-    assert.deepEqual(parsed["DP-1"], { name: "DP-1", disabled: false, logical: { x: 0, y: 0, scale: 1.25, transform: "90" }, modes: [{ width: 2560, height: 1440, refresh_rate: 143998 }], current_mode: 0, vrr_enabled: true, vrr_on_demand: true, vrr_supported: true });
+    assert.deepEqual(parsed["DP-1"], { name: "DP-1", disabled: false, logical: { x: 0, y: 0, scale: 1.25, transform: "90" }, modes: [{ width: 2560, height: 1440, refresh_rate: 143998 }], current_mode: 0, vrr_enabled: true, vrr_on_demand: true, vrr_supported: true, drm_lease: false });
     assert.equal(parsed["HDMI-A-1"].disabled, true);
     assert.equal(parsed["eDP-1"].disabled, false);
     assert.deepEqual([parsed["eDP-1"].vrr_enabled, parsed["eDP-1"].vrr_on_demand, parsed["eDP-1"].max_bpc], [true, false, 10]);
@@ -152,6 +152,19 @@ test("hyprland profiles keep identical monitors apart and still match after the 
     assert.deepEqual(owners.map(o => o.length), [1, 1, 1]);
 });
 
+test("units sharing make, model and serial are keyed by connector, and a stale key they all answer to is not applied", () => {
+    const tv = name => ({ name, make: "LG Electronics", model: "LG TV SSCR2", serialNumber: "0x01010101", modes: [] });
+    const twins = model.outputsFromWlr([tv("HDMI-A-1"), tv("HDMI-A-2"), wlr.outputs[0]], {});
+    for (const compositor of ["hyprland", "niri", "sway"])
+        assert.deepEqual(model.currentOutputSet(twins, "model", compositor).filter(id => id.startsWith("HDMI")), ["HDMI-A-1", "HDMI-A-2"]);
+    assert.deepEqual([model.hyprlandIdentifier(twins["HDMI-A-2"], "HDMI-A-2", "model"), model.niriIdentifier(twins["HDMI-A-2"], "HDMI-A-2", "model")], ["HDMI-A-2", "HDMI-A-2"]);
+    assert.equal(model.hyprlandIdentifier(twins["DP-1"], "DP-1", "model"), "desc:Dell Inc. DELL U2720Q ABC123");
+    const stale = { outputs: { "desc:LG Electronics LG TV SSCR2 0x01010101": { disabled: true }, "LG Electronics LG TV SSCR2 0x01010101": {}, "HDMI-A-2": { disabled: true }, "Dell Inc. DELL U2720Q ABC123": {} } };
+    const applied = mode => Object.keys(model.outputsDataFromConfigEntry(stale, twins, mode, "hyprland"));
+    assert.deepEqual(applied("model"), ["HDMI-A-2", "Dell Inc. DELL U2720Q ABC123"]);
+    assert.equal(applied("system").includes("desc:LG Electronics LG TV SSCR2 0x01010101"), false);
+});
+
 test("legacy hyprland profile keys gain the serial only when the profile is exactly the connected models", () => {
     const legacy = { "Dell Inc. DELL U2720Q": { mode: "a" }, "BOE 0x0A1B": { mode: "b" }, "LG Electronics LG ULTRAGEAR": { mode: "c" } };
     const migrate = (outputs, keys = legacy, mode = "model") => {
@@ -214,10 +227,10 @@ test("neutral config carries the backend settings for the compositor and hoists 
 
 test("filterDisconnectedOnly keeps saved outputs no live head matches, desc: keys resolve only on hyprland, names are trimmed", () => {
     const hyprParsed = plain(model.parseHyprlandOutputs(text("hyprland-monitors.lua")));
-    assert.deepEqual(Object.keys(model.filterDisconnectedOnly(hyprParsed, live, "model", "hyprland")), ["DP-2", "DP-3", "it's"]);
-    assert.deepEqual(Object.keys(model.filterDisconnectedOnly(hyprParsed, live, "system", "niri")), ["desc:Dell Inc. DELL U2720Q ABC123", "DP-2", "DP-3", "it's"]);
-    assert.deepEqual(model.filterDisconnectedOnly(plain(model.parseNiriOutputs(text("niri-outputs.kdl"))), live, "model", "niri"), {});
-    assert.deepEqual(Object.keys(model.filterDisconnectedOnly({ " DP-1 ": { name: "DP-1" }, "DP-7 ": { name: "DP-7" } }, live, "system", "niri")), ["DP-7 "]);
+    assert.deepEqual(Object.keys(model.filterDisconnectedOnly(hyprParsed, live, "hyprland")), ["DP-2", "DP-3", "it's"]);
+    assert.deepEqual(Object.keys(model.filterDisconnectedOnly(hyprParsed, live, "niri")), ["desc:Dell Inc. DELL U2720Q ABC123", "DP-2", "DP-3", "it's"]);
+    assert.deepEqual(model.filterDisconnectedOnly(plain(model.parseNiriOutputs(text("niri-outputs.kdl"))), live, "niri"), {});
+    assert.deepEqual(Object.keys(model.filterDisconnectedOnly({ " DP-1 ": { name: "DP-1" }, "DP-7 ": { name: "DP-7" } }, live, "niri")), ["DP-7 "]);
 });
 
 test("sizes: rotation swaps, niri ceils and hyprland rounds logical sizes, bounds default to 1920x1080", () => {

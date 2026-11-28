@@ -105,6 +105,13 @@ Column {
                 })
         }
 
+        SettingsToggleRow {
+            text: I18n.tr("Scroll wheel")
+            visible: BrightnessService.brightnessAvailable
+            checked: root.page.value("scrollEnabled")
+            onToggled: checked => root.page.set("scrollEnabled", checked)
+        }
+
         SettingsButtonGroupRow {
             resetStore: root.page
             resetKeys: ["batterySeparator"]

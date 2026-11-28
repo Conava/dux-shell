@@ -16,6 +16,7 @@ Singleton {
     property var capabilities: []
     property int apiVersion: 0
     property string cliVersion: ""
+    property var deviceCompatible: []
     readonly property int expectedApiVersion: 1
     property var availablePlugins: []
     property var installedPlugins: []
@@ -283,6 +284,7 @@ Singleton {
             apiVersion = data.apiVersion || 0;
             cliVersion = data.cliVersion || "";
             capabilities = data.capabilities || [];
+            deviceCompatible = data.compatible || [];
 
             log.info("Connected (API v" + apiVersion + ", CLI " + cliVersion + ") -", JSON.stringify(capabilities));
 
@@ -808,10 +810,19 @@ Singleton {
         sendRequest("sysupdate.getState", null, callback);
     }
 
-    function sysupdateRefresh(force, callback, background) {
-        sendRequest("sysupdate.refresh", {
+    function sysupdateRefresh(force, callback, background, excluded) {
+        const params = {
             "force": force === true,
             "background": background === true
+        };
+        if (Array.isArray(excluded))
+            params.excluded = excluded;
+        sendRequest("sysupdate.refresh", params, callback);
+    }
+
+    function sysupdateSetExcluded(excluded, callback) {
+        sendRequest("sysupdate.setExcluded", {
+            "excluded": excluded
         }, callback);
     }
 

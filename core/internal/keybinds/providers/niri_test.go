@@ -119,7 +119,7 @@ func TestNiriFormatRawAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.action, func(t *testing.T) {
-			result := provider.formatRawAction(tt.action, tt.args)
+			result := provider.formatRawAction(tt.action, tt.args, nil)
 			if result != tt.expected {
 				t.Errorf("formatRawAction(%q, %v) = %q, want %q", tt.action, tt.args, result, tt.expected)
 			}

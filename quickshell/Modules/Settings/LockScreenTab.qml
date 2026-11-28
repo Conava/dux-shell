@@ -385,7 +385,7 @@ Item {
                         path: SettingsData.lockScreenWallpaperPath || SessionData.getMonitorWallpaperImage(previewScreen?.name ?? "") || ""
                         clearable: SettingsData.lockScreenWallpaperPath !== ""
                         fillModeName: SettingsData.lockScreenWallpaperFillMode || (SettingsData.lockScreenWallpaperPath !== "" ? "Fill" : SessionData.getMonitorWallpaperFillMode(previewScreen?.name ?? ""))
-                        blur: Theme.lockScreenBlur
+                        blur: blurRow.currentValue / 100
                         blurMax: previewScreen ? Theme.lockScreenBlurMax * width / previewScreen.width : 0
                         activateIcon: "edit"
                         activateText: I18n.tr("Edit widgets")
@@ -400,9 +400,38 @@ Item {
                         LockScreenMinimap {
                             anchors.fill: parent
                             screen: lockThumb.previewScreen
+                            scrimAlpha: scrimRow.currentValue / 100
                             active: lockThumb.visible && root.pageSettled && (root.parentModal?.shouldBeVisible ?? true)
                         }
                     }
+                }
+
+                SettingsSliderRow {
+                    id: blurRow
+
+                    settingKey: "lockScreenBlurStrength"
+                    tags: ["lock", "screen", "wallpaper", "background", "blur", "strength"]
+                    text: I18n.tr("Background blur")
+                    minimumLabel: I18n.tr("Off")
+                    value: SettingsData.lockScreenBlurStrength
+                    minimum: 0
+                    maximum: 100
+                    unit: "%"
+                    onSliderDragFinished: finalValue => SettingsData.set("lockScreenBlurStrength", finalValue)
+                }
+
+                SettingsSliderRow {
+                    id: scrimRow
+
+                    settingKey: "lockScreenScrimOpacity"
+                    tags: ["lock", "screen", "wallpaper", "background", "dim", "darken", "scrim", "opacity"]
+                    text: I18n.tr("Background dim", "lock screen setting, how much the wallpaper is darkened")
+                    minimumLabel: I18n.tr("Off")
+                    value: SettingsData.lockScreenScrimOpacity
+                    minimum: 0
+                    maximum: 100
+                    unit: "%"
+                    onSliderDragFinished: finalValue => SettingsData.set("lockScreenScrimOpacity", finalValue)
                 }
 
                 SettingsDropdownRow {
@@ -695,7 +724,7 @@ Item {
                 settingKey: "lockDisplay"
                 SettingsRow {
                     body: StyledText {
-                        text: I18n.tr("Other displays show a solid color for OLED burn-in protection")
+                        text: SettingsData.lockScreenBlurInactiveBackground ? I18n.tr("Other displays show blurred wallpaper with a solid color fallback", "lock screen inactive display background description") : I18n.tr("Other displays show a solid color for OLED burn-in protection")
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceVariantText
                         width: parent.width
@@ -712,6 +741,19 @@ Item {
                         updated["lockScreen"] = prefs;
                         SettingsData.set("screenPreferences", updated);
                     }
+                }
+
+                SettingsToggleRow {
+                    settingKey: "lockScreenBlurInactiveBackground"
+                    tags: ["lock", "screen", "inactive", "display", "wallpaper", "blur"]
+                    text: I18n.tr("Blur wallpaper on inactive monitors", "lock screen inactive display wallpaper toggle")
+                    description: I18n.tr("Show blurred wallpaper instead of a solid background. Disable for OLED burn-in protection.", "lock screen inactive display wallpaper toggle description")
+                    checked: SettingsData.lockScreenBlurInactiveBackground
+                    visible: {
+                        const prefs = SettingsData.screenPreferences?.lockScreen;
+                        return Array.isArray(prefs) && !prefs.includes("all") && prefs.length > 0;
+                    }
+                    onToggled: checked => SettingsData.set("lockScreenBlurInactiveBackground", checked)
                 }
 
                 SettingsRow {

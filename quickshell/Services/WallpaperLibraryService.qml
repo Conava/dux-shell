@@ -6,6 +6,7 @@ import Quickshell
 import qs.Common
 import qs.Services
 import "../Common/WallpaperFormats.js" as WallpaperFormats
+import "../Common/WallpaperMatch.js" as WallpaperMatch
 
 Singleton {
     id: root
@@ -26,15 +27,19 @@ Singleton {
         return SessionData.wallpaperFolderSelection.filter(path => visible.has(path));
     }
     readonly property bool filtering: selection.length > 0
+    readonly property bool fitFilter: SessionData.wallpaperHideMismatched && enabled
 
     property var items: []
     property var missing: []
     property bool loaded: false
+
+    signal folderRemoved(string path)
     property int revision: 0
 
     property var variantOwners: new Map()
     property int requestId: 0
     property string requestKey: ""
+    property bool requestDimensions: false
 
     onHeldChanged: {
         if (held) {
@@ -57,6 +62,10 @@ Singleton {
     onFoldersChanged: Qt.callLater(refresh)
     // Deferred because bindings derived from the selection may not have updated when this fires.
     onSelectionChanged: Qt.callLater(bumpRevision)
+    onFitFilterChanged: {
+        Qt.callLater(refresh);
+        Qt.callLater(bumpRevision);
+    }
 
     function bumpRevision() {
         revision++;
@@ -73,9 +82,11 @@ Singleton {
         }
         const requested = requestFolders();
         const key = JSON.stringify(requested);
-        if (key === requestKey)
+        // A list fetched with sizes also serves a request without them.
+        if (key === requestKey && (requestDimensions || !fitFilter))
             return;
         requestKey = key;
+        requestDimensions = fitFilter;
         const request = ++requestId;
         list(requested, result => {
             if (request !== requestId)
@@ -113,7 +124,8 @@ Singleton {
     function list(requested, callback) {
         DMSService.sendRequest("wallpaper.list", {
             "folders": requested,
-            "extensions": WallpaperFormats.extensions(true)
+            "extensions": WallpaperFormats.extensions(true),
+            "dimensions": fitFilter
         }, response => {
             if (response.error) {
                 log.warn("Failed to list wallpapers:", response.error);
@@ -138,6 +150,28 @@ Singleton {
         return itemsIn(entries, filtering ? selection : visibleFolders.map(folder => folder.path));
     }
 
+    function normalizeAppearance(appearance) {
+        return appearance === "light" || appearance === "dark" ? appearance : "";
+    }
+
+    function folderMatchesMode(folder, lightMode) {
+        if (!folder)
+            return false;
+        const mode = normalizeAppearance(folder.appearance);
+        if (!mode)
+            return true;
+        return mode === (lightMode ? "light" : "dark");
+    }
+
+    function selectedForMode(entries, lightMode) {
+        const base = selected(entries);
+        const mode = lightMode === undefined ? SessionData.isLightMode : !!lightMode;
+        return base.filter(item => {
+            const folder = folders.find(entry => entry.path === item.folder);
+            return folderMatchesMode(folder, mode);
+        });
+    }
+
     function folderItems(path) {
         return itemsIn(items, [path]);
     }
@@ -157,6 +191,63 @@ Singleton {
     function inPool(ownerPath) {
         const owner = folders.find(folder => folder.path === ownerPath);
         return !!owner && !owner.hidden && (!filtering || selection.includes(ownerPath));
+    }
+
+    function physicalSize(screen) {
+        const scale = CompositorService.getScreenScale(screen);
+        return {
+            "width": Math.round(screen.width * scale),
+            "height": Math.round(screen.height * scale)
+        };
+    }
+
+    // Shared mode judges against the screen with the most pixels.
+    function fitDisplay(screenName) {
+        const screens = Quickshell.screens;
+        if (screens.length === 0)
+            return null;
+        const named = SessionData.perMonitorWallpaper ? SessionData._screenByName(screenName) : null;
+        if (named)
+            return physicalSize(named);
+        let best = null;
+        for (let i = 0; i < screens.length; i++) {
+            const size = physicalSize(screens[i]);
+            if (!best || size.width * size.height > best.width * best.height)
+                best = size;
+        }
+        return best;
+    }
+
+    function fitting(entries, screenName) {
+        if (!fitFilter)
+            return entries;
+        const display = fitDisplay(screenName);
+        if (!display)
+            return entries;
+        // The wallpaper on screen stays listed, so it can still be shown as current.
+        const current = listedPath(SessionData.perMonitorWallpaper && screenName ? SessionData.getMonitorWallpaper(screenName) : SessionData.wallpaperPath);
+        return entries.filter(item => item.path === current || WallpaperMatch.fits(item, display));
+    }
+
+    function fits(item, screenName) {
+        return !fitFilter || WallpaperMatch.fits(item, fitDisplay(screenName));
+    }
+
+    function variantFor(item, screenName) {
+        if (fitFilter)
+            return WallpaperMatch.variantFor(item, fitDisplay(screenName));
+        const screen = SessionData._screenByName(screenName) || Quickshell.screens[0];
+        return WallpaperMatch.variantFor(item, screen ? {
+            "width": screen.width,
+            "height": screen.height
+        } : null);
+    }
+
+    function variantPath(path, screenName) {
+        if (!variantOwners.has(path))
+            return path;
+        const item = items.find(entry => entry.path === path);
+        return item ? variantFor(item, screenName) : path;
     }
 
     function listedPath(path) {
@@ -208,7 +299,8 @@ Singleton {
                 {
                     "path": normalized,
                     "recursive": true,
-                    "hidden": false
+                    "hidden": false,
+                    "appearance": ""
                 }
             ]));
         });
@@ -220,6 +312,7 @@ Singleton {
             return false;
         SessionData.set("wallpaperFolders", remaining);
         SessionData.set("wallpaperFolderSelection", SessionData.wallpaperFolderSelection.filter(ticked => ticked !== path));
+        folderRemoved(path);
         return true;
     }
 
@@ -239,6 +332,12 @@ Singleton {
     function setFolderRecursive(path, recursive) {
         return updateFolder(path, {
             "recursive": !!recursive
+        });
+    }
+
+    function setFolderAppearance(path, appearance) {
+        return updateFolder(path, {
+            "appearance": normalizeAppearance(appearance)
         });
     }
 

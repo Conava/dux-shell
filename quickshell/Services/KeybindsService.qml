@@ -697,12 +697,16 @@ Singleton {
         bindRemoved(key);
     }
 
+    function supportsNext(feature) {
+        return currentProvider === "niri" && NiriService.supports(feature);
+    }
+
     function getActionLabel(action) {
         return Actions.getActionLabel(action, currentProvider);
     }
 
     function isKnownCompositorAction(action) {
-        return Actions.isKnownCompositorAction(currentProvider, action);
+        return Actions.isKnownCompositorAction(currentProvider, action, supportsNext);
     }
 
     function getCompositorCategories() {
@@ -710,7 +714,7 @@ Singleton {
     }
 
     function getCompositorActions(category) {
-        return Actions.getCompositorActions(currentProvider, category);
+        return Actions.getCompositorActions(currentProvider, category, supportsNext);
     }
 
     function getDmsActions() {

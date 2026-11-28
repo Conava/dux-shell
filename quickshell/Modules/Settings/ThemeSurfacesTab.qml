@@ -32,41 +32,6 @@ Column {
         }
     }
 
-    readonly property var opacityTargets: {
-        SettingsData.barConfigs;
-        SettingsData.dockConfigs;
-        const frameBarId = SettingsData.frameEnabled ? SettingsData.frameBarConfig?.id : undefined;
-        const bars = SettingsData.barConfigs.filter(config => !SettingsData.isDotBarConfig(config)).map(config => ({
-                    key: "bar:" + config.id,
-                    kind: "bar",
-                    id: config.id,
-                    name: config.name || config.id,
-                    enabled: config.enabled !== false,
-                    override: config.followInterfaceStyle === false,
-                    transparency: config.transparency ?? 1,
-                    frame: config.id === frameBarId
-                }));
-        const docks = SettingsData.dockConfigs.map(config => ({
-                    key: "dock:" + config.id,
-                    kind: "dock",
-                    id: config.id,
-                    name: config.name,
-                    enabled: config.enabled !== false,
-                    override: config.followInterfaceStyle === false,
-                    transparency: config.transparency ?? 1,
-                    overlay: config.useOverlayLayer ?? false
-                }));
-        return bars.concat(docks);
-    }
-
-    function setOpacityOverride(target, patch) {
-        if (target.kind === "bar") {
-            SettingsData.updateBarConfig(target.id, patch);
-            return;
-        }
-        SettingsData.updateDockConfig(target.id, patch);
-    }
-
     function openSurfaceBorderColorPicker() {
         PopoutService.colorPickerModal.selectedColor = SettingsData.blurBorderCustomColor ?? "#ffffff";
         PopoutService.colorPickerModal.pickerTitle = I18n.tr("Surface Border Color");
@@ -134,6 +99,7 @@ Column {
                 settingKey: "blurForegroundLayers"
                 valueKeys: ["foregroundLayerTransparency"]
                 text: I18n.tr("Foreground layers")
+                sliderText: I18n.tr("Opacity")
                 checked: SettingsData.blurForegroundLayers ?? true
                 value: Math.round((SettingsData.foregroundLayerTransparency ?? 1.0) * 100)
                 minimum: 0
@@ -147,6 +113,7 @@ Column {
                 tags: ["foreground", "layers", "outline", "border", "opacity", "cards", "pills", "widgets", "notifications", "control center"]
                 settingKey: "blurLayerOutline"
                 text: I18n.tr("Layer outline")
+                sliderText: I18n.tr("Opacity")
                 description: I18n.tr("Faint edge on cards, pills and widgets", "surface layer outline toggle description")
                 checked: root.layerOutlineEnabled
                 value: Math.round((SettingsData.blurLayerOutlineOpacity ?? 0) * 100)
@@ -163,6 +130,7 @@ Column {
                 accessoryKeys: ["blurBorderColor", "blurBorderCustomColor"]
                 valueKeys: ["blurBorderOpacity"]
                 text: I18n.tr("Border")
+                sliderText: I18n.tr("Opacity")
                 description: I18n.tr("Edge around popups and modals", "surface border toggle description")
                 checked: root.borderEnabled
                 value: Math.round((SettingsData.blurBorderOpacity ?? 0.35) * 100)
@@ -237,6 +205,7 @@ Column {
                 settingKey: "blurEnabled"
                 valueKeys: ["blurStrength"]
                 text: I18n.tr("Background blur")
+                sliderText: I18n.tr("Intensity")
                 visible: BlurService.available
                 sliderVisible: BlurService.strengthConfigurable
                 checked: SettingsData.blurEnabled ?? false
@@ -370,6 +339,7 @@ Column {
                 tags: ["window", "corner", "radius", "match", "follow", "link", "strength", "rounded", "popout", "menu", "modal", "compositor", "niri", "hyprland", "mango"]
                 settingKey: "windowRadius"
                 text: I18n.tr("Override window radius", "toggle: stop the window radius following the corner style setting")
+                sliderText: I18n.tr("Radius")
                 visible: root.windowRadiusKey !== ""
                 checked: Theme.compositorRadiusOverride >= 0
                 value: Theme.windowRadius
@@ -385,7 +355,7 @@ Column {
     SettingsDeferred {
         SettingsCard {
             tab: "theme"
-            tags: ["focus", "ring", "keyboard", "scroll", "shadows"]
+            tags: ["focus", "ring", "keyboard", "press", "expressive", "scroll", "shadows"]
             title: I18n.tr("Controls")
             settingKey: "surfaceControls"
 
@@ -466,75 +436,6 @@ Column {
         }
     }
 
-    Repeater {
-        model: [
-            {
-                kind: "bar",
-                title: I18n.tr("Bars"),
-                settingKey: "barOpacityOverrides"
-            },
-            {
-                kind: "dock",
-                title: I18n.tr("Docks"),
-                settingKey: "dockOpacityOverrides"
-            }
-        ]
-
-        SettingsCard {
-            id: targetCard
-
-            required property var modelData
-            readonly property var targets: root.opacityTargets.filter(target => target.kind === modelData.kind)
-            readonly property var activeTargets: targets.filter(target => target.enabled)
-            readonly property var hiddenTargets: targets.filter(target => !target.enabled)
-            // String keys: a config edit must not rebuild the row holding the focused control
-            readonly property string activeKeys: activeTargets.map(target => target.key).join("\n")
-            readonly property string hiddenKeys: hiddenTargets.map(target => target.key).join("\n")
-            property bool showHidden: false
-
-            tab: "theme"
-            tags: ["surface", "opacity", "transparency", modelData.kind, "override"]
-            title: modelData.title
-            settingKey: modelData.settingKey
-            visible: targets.length > 0
-
-            SettingsControlledBy {
-                visible: targetCard.modelData.kind === "dock" && SettingsData.connectedFrameModeActive && targetCard.activeTargets.some(target => !target.overlay)
-                parentModal: root.parentModal
-                section: "frameSurfaceOpacity"
-                settingLabel: I18n.tr("Opacity")
-                reason: I18n.tr("Managed by Frame in Connected Mode")
-            }
-
-            Repeater {
-                model: targetCard.activeKeys ? targetCard.activeKeys.split("\n") : []
-                delegate: opacityTargetRow
-            }
-
-            SettingsRow {
-                tab: "theme"
-                tags: ["surface", "opacity", "transparency", targetCard.modelData.kind, "hidden", "disabled"]
-                title: I18n.tr("Hidden (%1)", "island settings: hidden groups divider, %1 is count").arg(targetCard.hiddenTargets.length)
-                iconName: "visibility_off"
-                visible: targetCard.hiddenTargets.length > 0
-                clickable: true
-                onClicked: targetCard.showHidden = !targetCard.showHidden
-
-                DIcon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: targetCard.showHidden ? "expand_less" : "expand_more"
-                    size: Theme.iconSize
-                    color: Theme.onSurfaceVariant
-                }
-            }
-
-            Repeater {
-                model: targetCard.showHidden && targetCard.hiddenKeys ? targetCard.hiddenKeys.split("\n") : []
-                delegate: opacityTargetRow
-            }
-        }
-    }
-
     SettingsDeferred {
         SettingsCard {
             tab: "theme"
@@ -567,6 +468,7 @@ Column {
                     settingKey: "floatingWindowForegroundLayers"
                     valueKeys: ["floatingWindowForegroundTransparency"]
                     text: I18n.tr("Foreground layers")
+                    sliderText: I18n.tr("Opacity")
                     checked: Theme.floatingWindowForegroundLayers
                     value: Math.round(Theme.floatingWindowForegroundTransparency * 100)
                     minimum: 0
@@ -609,42 +511,6 @@ Column {
         }
     }
 
-    Component {
-        id: opacityTargetRow
-
-        SettingsToggleSliderRow {
-            id: overrideRow
-
-            required property string modelData
-            readonly property var target: root.opacityTargets.find(entry => entry.key === modelData) ?? null
-
-            tab: "theme"
-            tags: ["surface", "opacity", "transparency", "bar", "dock", "override"]
-            settingKey: "surfaceOpacity_" + modelData.replace(":", "_")
-            text: target?.name ?? ""
-            description: target?.frame ? I18n.tr("Frame") + " · " + I18n.tr("Override") : I18n.tr("Override")
-            checked: target?.override ?? false
-            value: Math.round((target?.transparency ?? 1) * 100)
-            minimum: 0
-            maximum: 100
-            modified: target?.override ?? false
-            valueModified: (target?.transparency ?? 1) !== 1
-            onResetRequested: root.setOpacityOverride(target, {
-                followInterfaceStyle: true,
-                transparency: 1
-            })
-            onValueResetRequested: root.setOpacityOverride(target, {
-                transparency: 1
-            })
-            onToggled: checked => root.setOpacityOverride(target, {
-                    followInterfaceStyle: !checked
-                })
-            onSliderDragFinished: finalValue => root.setOpacityOverride(target, {
-                    transparency: finalValue / 100
-                })
-        }
-    }
-
     SettingsDeferred {
         SettingsCard {
             tab: "theme"
@@ -652,44 +518,31 @@ Column {
             title: I18n.tr("Colors")
             settingKey: "surfaceColors"
 
-            SettingsDropdownRow {
+            ColorDropdownRow {
                 tab: "theme"
                 tags: ["button", "color", "primary", "accent", "action"]
                 settingKey: "buttonColorMode"
                 text: I18n.tr("Button color")
-                options: [I18n.tr("Primary", "button color option"), I18n.tr("Primary Container", "button color option"), I18n.tr("Secondary", "button color option"), I18n.tr("Surface Variant", "button color option")]
-                optionColorMap: ({
-                        [I18n.tr("Primary", "button color option")]: Theme.roleColor("primary"),
-                        [I18n.tr("Primary Container", "button color option")]: Theme.roleColor("primaryContainer"),
-                        [I18n.tr("Secondary", "button color option")]: Theme.roleColor("secondary"),
-                        [I18n.tr("Surface Variant", "button color option")]: Theme.roleColor("surfaceVariant")
-                    })
-                currentValue: {
-                    switch (SettingsData.buttonColorMode) {
-                    case "primaryContainer":
-                        return I18n.tr("Primary Container", "button color option");
-                    case "secondary":
-                        return I18n.tr("Secondary", "button color option");
-                    case "surfaceVariant":
-                        return I18n.tr("Surface Variant", "button color option");
-                    default:
-                        return I18n.tr("Primary", "button color option");
+                currentMode: SettingsData.buttonColorMode
+                options: [
+                    {
+                        "value": "primary",
+                        "label": I18n.tr("Primary", "button color option")
+                    },
+                    {
+                        "value": "primaryContainer",
+                        "label": I18n.tr("Primary Container", "button color option")
+                    },
+                    {
+                        "value": "secondary",
+                        "label": I18n.tr("Secondary", "button color option")
+                    },
+                    {
+                        "value": "surfaceVariant",
+                        "label": I18n.tr("Surface Variant", "button color option")
                     }
-                }
-                onValueChanged: value => {
-                    switch (value) {
-                    case I18n.tr("Primary Container", "button color option"):
-                        SettingsData.set("buttonColorMode", "primaryContainer");
-                        return;
-                    case I18n.tr("Secondary", "button color option"):
-                        SettingsData.set("buttonColorMode", "secondary");
-                        return;
-                    case I18n.tr("Surface Variant", "button color option"):
-                        SettingsData.set("buttonColorMode", "surfaceVariant");
-                        return;
-                    }
-                    SettingsData.set("buttonColorMode", "primary");
-                }
+                ]
+                onModeSelected: mode => SettingsData.set("buttonColorMode", mode)
             }
 
             SettingsSliderRow {
@@ -714,44 +567,31 @@ Column {
             title: I18n.tr("Control Center", "Control Center")
             settingKey: "controlCenterIcons"
 
-            SettingsDropdownRow {
+            ColorDropdownRow {
                 tab: "theme"
                 tags: ["control", "center", "tile", "button", "color", "active"]
                 settingKey: "controlCenterTileColorMode"
                 text: I18n.tr("Tile color", "control center tile color dropdown label")
-                options: [I18n.tr("Primary", "tile color option"), I18n.tr("Primary Container", "tile color option"), I18n.tr("Secondary", "tile color option"), I18n.tr("Surface Variant", "tile color option")]
-                optionColorMap: ({
-                        [I18n.tr("Primary", "tile color option")]: Theme.roleColor("primary"),
-                        [I18n.tr("Primary Container", "tile color option")]: Theme.roleColor("primaryContainer"),
-                        [I18n.tr("Secondary", "tile color option")]: Theme.roleColor("secondary"),
-                        [I18n.tr("Surface Variant", "tile color option")]: Theme.roleColor("surfaceVariant")
-                    })
-                currentValue: {
-                    switch (SettingsData.controlCenterTileColorMode) {
-                    case "primaryContainer":
-                        return I18n.tr("Primary Container", "tile color option");
-                    case "secondary":
-                        return I18n.tr("Secondary", "tile color option");
-                    case "surfaceVariant":
-                        return I18n.tr("Surface Variant", "tile color option");
-                    default:
-                        return I18n.tr("Primary", "tile color option");
+                currentMode: SettingsData.controlCenterTileColorMode
+                options: [
+                    {
+                        "value": "primary",
+                        "label": I18n.tr("Primary", "tile color option")
+                    },
+                    {
+                        "value": "primaryContainer",
+                        "label": I18n.tr("Primary Container", "tile color option")
+                    },
+                    {
+                        "value": "secondary",
+                        "label": I18n.tr("Secondary", "tile color option")
+                    },
+                    {
+                        "value": "surfaceVariant",
+                        "label": I18n.tr("Surface Variant", "tile color option")
                     }
-                }
-                onValueChanged: value => {
-                    switch (value) {
-                    case I18n.tr("Primary Container", "tile color option"):
-                        SettingsData.set("controlCenterTileColorMode", "primaryContainer");
-                        return;
-                    case I18n.tr("Secondary", "tile color option"):
-                        SettingsData.set("controlCenterTileColorMode", "secondary");
-                        return;
-                    case I18n.tr("Surface Variant", "tile color option"):
-                        SettingsData.set("controlCenterTileColorMode", "surfaceVariant");
-                        return;
-                    }
-                    SettingsData.set("controlCenterTileColorMode", "primary");
-                }
+                ]
+                onModeSelected: mode => SettingsData.set("controlCenterTileColorMode", mode)
             }
 
             SettingsButtonGroupRow {

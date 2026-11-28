@@ -48,7 +48,7 @@ type NiriWindowRule struct {
 	OpenMaximizedToEdges    *bool
 	OpenFullscreen          *bool
 	OpenFocused             *bool
-	OpenOnOutput            string
+	OpenOnOutput            []string
 	OpenOnWorkspace         string
 	DefaultColumnWidth      string
 	DefaultWindowHeight     string
@@ -57,6 +57,7 @@ type NiriWindowRule struct {
 	OnXdgActivate           string
 	PinchSensitivity        *float64
 	BlockOutFrom            string
+	BlockOutKind            string
 	DefaultColumnDisplay    string
 	ScrollFactor            *float64
 	CornerRadius            *int
@@ -245,7 +246,7 @@ func (p *NiriRulesParser) parseWindowRuleNode(node *document.Node) {
 			rule.OpenFocused = &b
 		case "open-on-output":
 			if len(child.Arguments) > 0 {
-				rule.OpenOnOutput = child.Arguments[0].ValueString()
+				rule.OpenOnOutput = append(rule.OpenOnOutput, child.Arguments[0].ValueString())
 			}
 		case "open-on-workspace":
 			if len(child.Arguments) > 0 {
@@ -273,6 +274,9 @@ func (p *NiriRulesParser) parseWindowRuleNode(node *document.Node) {
 		case "block-out-from":
 			if len(child.Arguments) > 0 {
 				rule.BlockOutFrom = child.Arguments[0].ValueString()
+			}
+			if val, ok := child.Properties.Get("kind"); ok {
+				rule.BlockOutKind = val.ValueString()
 			}
 		case "default-column-display":
 			if len(child.Arguments) > 0 {
@@ -620,6 +624,7 @@ func ConvertNiriRulesToWindowRules(niriRules []NiriWindowRule) []windowrules.Win
 				OnXdgActivate:             nr.OnXdgActivate,
 				PinchSensitivity:          nr.PinchSensitivity,
 				BlockOutFrom:              nr.BlockOutFrom,
+				BlockOutKind:              nr.BlockOutKind,
 				DefaultColumnDisplay:      nr.DefaultColumnDisplay,
 				ScrollFactor:              nr.ScrollFactor,
 				CornerRadius:              nr.CornerRadius,
@@ -790,6 +795,7 @@ func (p *NiriWritableProvider) LoadDMSRules() ([]windowrules.WindowRule, error) 
 				OnXdgActivate:             nr.OnXdgActivate,
 				PinchSensitivity:          nr.PinchSensitivity,
 				BlockOutFrom:              nr.BlockOutFrom,
+				BlockOutKind:              nr.BlockOutKind,
 				DefaultColumnDisplay:      nr.DefaultColumnDisplay,
 				ScrollFactor:              nr.ScrollFactor,
 				CornerRadius:              nr.CornerRadius,
@@ -833,19 +839,17 @@ func (p *NiriWritableProvider) WriteDMSRules(rules []windowrules.WindowRule) err
 		return err
 	}
 
-	next := !slices.ContainsFunc(rules, usesNiriNextSyntax) || niriConfigNext()
-
 	var lines []string
 	lines = append(lines, "// DMS Window Rules - Managed by Dux Modular Shell")
 	lines = append(lines, "// Do not edit manually - changes may be overwritten")
 	lines = append(lines, "")
 
 	for _, rule := range rules {
-		lines = append(lines, p.formatRule(rule, next))
+		lines = append(lines, p.formatRule(rule))
 		lines = append(lines, "")
 	}
 
-	if niriConfigNext() {
+	if niriSupports(config.NiriCapTypeInOverview) {
 		lines = append(lines, niriOverviewLayerRule, "")
 	}
 
@@ -886,15 +890,7 @@ const niriOverviewLayerRule = `layer-rule {
 
 var niriXdgActivateValues = []string{"ignore", "set-urgent", "focus"}
 
-// Probed lazily: it spawns niri, and only rules with post-26.04 syntax need the answer.
-var niriConfigNext = func() bool {
-	return config.HasNiriCapability(config.NiriCapConfigNext)
-}
-
-func usesNiriNextSyntax(rule windowrules.WindowRule) bool {
-	a := rule.Actions
-	return (a.VrrFullscreenOnly != nil && *a.VrrFullscreenOnly) || a.OnXdgActivate != "" || a.PinchSensitivity != nil
-}
+var niriSupports = config.HasNiriCapability
 
 func formatNiriMatchLine(keyword string, m windowrules.MatchCriteria) (string, bool) {
 	var matchProps []string
@@ -931,8 +927,8 @@ func formatNiriMatchLine(keyword string, m windowrules.MatchCriteria) (string, b
 	return "    " + keyword + " " + strings.Join(matchProps, " "), true
 }
 
-// next allows post-26.04 syntax; niri 26.04 rejects the whole config over it.
-func (p *NiriWritableProvider) formatRule(rule windowrules.WindowRule, next bool) string {
+// niri rejects the whole config over one syntax it does not know, so each post-26.04 one is gated.
+func (p *NiriWritableProvider) formatRule(rule windowrules.WindowRule) string {
 	var lines []string
 	lines = append(lines, fmt.Sprintf("// @id=%s @name=%s", rule.ID, rule.Name))
 	lines = append(lines, "window-rule {")
@@ -971,11 +967,15 @@ func (p *NiriWritableProvider) formatRule(rule windowrules.WindowRule, next bool
 	if a.OpenFocused != nil {
 		lines = append(lines, fmt.Sprintf("    open-focused %t", *a.OpenFocused))
 	}
-	if next && slices.Contains(niriXdgActivateValues, a.OnXdgActivate) {
+	if slices.Contains(niriXdgActivateValues, a.OnXdgActivate) && niriSupports(config.NiriCapRuleOnXdgActivate) {
 		lines = append(lines, fmt.Sprintf("    on-xdg-activate %q", a.OnXdgActivate))
 	}
-	if a.OpenOnOutput != "" {
-		lines = append(lines, fmt.Sprintf("    open-on-output %q", a.OpenOnOutput))
+	outputs := slices.DeleteFunc(slices.Clone(a.OpenOnOutput), func(o string) bool { return o == "" })
+	if len(outputs) > 1 && !niriSupports(config.NiriCapRuleOpenOnOutputList) {
+		outputs = outputs[:1]
+	}
+	for _, output := range outputs {
+		lines = append(lines, fmt.Sprintf("    open-on-output %q", output))
 	}
 	if a.OpenOnWorkspace != "" {
 		lines = append(lines, fmt.Sprintf("    open-on-workspace %q", a.OpenOnWorkspace))
@@ -987,13 +987,17 @@ func (p *NiriWritableProvider) formatRule(rule windowrules.WindowRule, next bool
 		lines = append(lines, formatSizeProperty("default-window-height", a.DefaultWindowHeight))
 	}
 	switch {
-	case next && a.VrrFullscreenOnly != nil && *a.VrrFullscreenOnly:
+	case a.VrrFullscreenOnly != nil && *a.VrrFullscreenOnly && niriSupports(config.NiriCapRuleVrrFullscreenOnly):
 		lines = append(lines, fmt.Sprintf("    variable-refresh-rate %q", niriVrrFullscreenOnly))
 	case a.VariableRefreshRate != nil && *a.VariableRefreshRate:
 		lines = append(lines, "    variable-refresh-rate true")
 	}
 	if a.BlockOutFrom != "" {
-		lines = append(lines, fmt.Sprintf("    block-out-from %q", a.BlockOutFrom))
+		line := fmt.Sprintf("    block-out-from %q", a.BlockOutFrom)
+		if a.BlockOutKind != "" && niriSupports(config.NiriCapRuleBlockOutKind) {
+			line += fmt.Sprintf(" kind=%q", a.BlockOutKind)
+		}
+		lines = append(lines, line)
 	}
 	if a.DefaultColumnDisplay != "" {
 		lines = append(lines, fmt.Sprintf("    default-column-display %q", a.DefaultColumnDisplay))
@@ -1001,7 +1005,7 @@ func (p *NiriWritableProvider) formatRule(rule windowrules.WindowRule, next bool
 	if a.ScrollFactor != nil {
 		lines = append(lines, fmt.Sprintf("    scroll-factor %.2f", *a.ScrollFactor))
 	}
-	if next && a.PinchSensitivity != nil {
+	if a.PinchSensitivity != nil && niriSupports(config.NiriCapRulePinchSensitivity) {
 		lines = append(lines, fmt.Sprintf("    pinch-sensitivity %s", formatFloat(*a.PinchSensitivity)))
 	}
 	if a.CornerRadius != nil {

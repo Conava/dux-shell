@@ -302,9 +302,9 @@ window-rule {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			orig := niriConfigNext
-			niriConfigNext = func() bool { return tt.capable }
-			t.Cleanup(func() { niriConfigNext = orig })
+			orig := niriSupports
+			niriSupports = func(string) bool { return tt.capable }
+			t.Cleanup(func() { niriSupports = orig })
 
 			tmpDir := t.TempDir()
 			rulesPath := filepath.Join(tmpDir, "dms", "windowrules.kdl")
@@ -372,10 +372,10 @@ window-rule {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			origNext, origValidate := niriConfigNext, niriValidateRules
-			niriConfigNext = func() bool { return true }
+			origSupports, origValidate := niriSupports, niriValidateRules
+			niriSupports = func(string) bool { return true }
 			niriValidateRules = func(string) error { return tt.validator }
-			t.Cleanup(func() { niriConfigNext, niriValidateRules = origNext, origValidate })
+			t.Cleanup(func() { niriSupports, niriValidateRules = origSupports, origValidate })
 
 			tmpDir := t.TempDir()
 			rulesPath := filepath.Join(tmpDir, "dms", "windowrules.kdl")
@@ -403,14 +403,14 @@ window-rule {
 	}
 }
 
-func TestNiriWriteKeepsOverviewLayerRuleOnlyOnConfigNext(t *testing.T) {
-	origNext, origValidate := niriConfigNext, niriValidateRules
-	t.Cleanup(func() { niriConfigNext, niriValidateRules = origNext, origValidate })
+func TestNiriWriteKeepsOverviewLayerRuleOnlyWhenSupported(t *testing.T) {
+	origSupports, origValidate := niriSupports, niriValidateRules
+	t.Cleanup(func() { niriSupports, niriValidateRules = origSupports, origValidate })
 	niriValidateRules = func(string) error { return nil }
 
-	for name, capable := range map[string]bool{"config-next": true, "older niri": false} {
+	for name, capable := range map[string]bool{"supported": true, "older niri": false} {
 		t.Run(name, func(t *testing.T) {
-			niriConfigNext = func() bool { return capable }
+			niriSupports = func(string) bool { return capable }
 
 			tmpDir := t.TempDir()
 			provider := NewNiriWritableProvider(tmpDir)

@@ -116,6 +116,9 @@ QtObject {
     readonly property Component colorPickerTile: Component {
         ColorPickerTile {}
     }
+    readonly property Component screenshotTile: Component {
+        ScreenshotTile {}
+    }
     readonly property Component userTile: Component {
         UserTile {}
     }
@@ -186,6 +189,8 @@ QtObject {
             return diskUsageTile;
         case "colorPicker":
             return colorPickerTile;
+        case "screenshot":
+            return screenshotTile;
         case "user":
             return userTile;
         case "lock":
@@ -223,7 +228,7 @@ QtObject {
             "description": I18n.tr("Profile"),
             "icon": "person",
             "type": "info",
-            "category": "user",
+            "category": "system",
             "enabled": true
         },
         {
@@ -431,6 +436,15 @@ QtObject {
             "text": I18n.tr("Color Picker"),
             "description": I18n.tr("Choose colors from palette"),
             "icon": "palette",
+            "type": "action",
+            "category": "display",
+            "enabled": true
+        },
+        {
+            "id": "screenshot",
+            "text": I18n.tr("Screenshot"),
+            "description": I18n.tr("Capture screen, window, or region"),
+            "icon": "screenshot_region",
             "type": "action",
             "category": "display",
             "enabled": true

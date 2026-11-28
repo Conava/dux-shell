@@ -115,12 +115,14 @@ function niriDockOverlap(windows, allWorkspaces, screenName, position, thickness
     const workspaceId = niriActiveWorkspaceId(allWorkspaces, screenName);
     if (workspaceId === null)
         return false;
+    // niri 26.04 never positions tiles; newer niri positions only tiles in view
+    const tilesPositioned = windows.some(w => !w.is_floating && w.layout?.tile_pos_in_workspace_view);
     for (const win of windows) {
         if (win.workspace_id !== workspaceId)
             continue;
         const geometry = niriWindowGeometry(win);
         if (!geometry) {
-            if (!win.is_floating)
+            if (!win.is_floating && !tilesPositioned)
                 return true;
             continue;
         }
@@ -128,6 +130,21 @@ function niriDockOverlap(windows, allWorkspaces, screenName, position, thickness
             return true;
     }
     return false;
+}
+
+function niriMaximizedOnScreen(windows, allWorkspaces, workspaceToplevels, screenName) {
+    if (!workspaceToplevels.some(t => t.maximized))
+        return false;
+    const workspace = allWorkspaces.find(ws => ws.output === screenName && ws.is_active);
+    if (!workspace)
+        return false;
+    if (windows.find(w => w.id === workspace.active_window_id)?.is_floating)
+        return true;
+    const viewed = workspaceToplevels.find(t => t.niriWindowId === workspace.active_window_id);
+    if (!viewed)
+        return false;
+    // sortToplevels pairs windows sharing an app id and title arbitrarily
+    return workspaceToplevels.some(t => t.maximized && t.appId === viewed.appId && t.title === viewed.title);
 }
 
 function hyprlandToplevelFor(hyprToplevels, toplevel) {

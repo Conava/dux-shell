@@ -20,7 +20,11 @@ DDialog {
     readonly property bool isNiri: CompositorService.isNiri
     readonly property bool isHyprland: CompositorService.isHyprland
     readonly property bool isMango: CompositorService.isMango
-    readonly property bool niriConfigNext: isNiri && NiriService.configNextSupported
+    readonly property bool niriVrrFullscreenOnly: isNiri && NiriService.supports("rule-vrr-fullscreen-only")
+    readonly property bool niriOnXdgActivate: isNiri && NiriService.supports("rule-on-xdg-activate")
+    readonly property bool niriPinchSensitivity: isNiri && NiriService.supports("rule-pinch-sensitivity")
+    readonly property bool niriOutputList: isNiri && NiriService.supports("rule-open-on-output-list")
+    readonly property bool niriBlockOutKind: isNiri && NiriService.supports("rule-block-out-kind")
     readonly property bool fieldsEnabled: !submitting
     readonly property bool halfPair: isHyprland && (!!moveXInput.text.trim() !== !!moveYInput.text.trim() || !!sizeWInput.text.trim() !== !!sizeHInput.text.trim())
 
@@ -43,6 +47,7 @@ DDialog {
     property bool saturationOn: false
     property int saturationValue: 100
     property string blockOutValue: ""
+    property bool blockOutHide: false
     property string columnDisplayValue: ""
     property string floatingRelativeValue: "top-left"
     property string columnWidthUnit: WindowRuleSize.PIXELS
@@ -114,7 +119,7 @@ DDialog {
         const options = [];
         if (!isNiri)
             options.push({
-                "label": I18n.tr("Float"),
+                "label": I18n.tr("Float", "verb, window rule action to open the window floating"),
                 "value": "float"
             });
         if (!isMango)
@@ -159,7 +164,7 @@ DDialog {
             "label": I18n.tr("Border with Background"),
             "value": "borderBg"
         }
-    ].filter(option => option.value !== "vrrFullscreen" || root.niriConfigNext)
+    ].filter(option => option.value !== "vrrFullscreen" || root.niriVrrFullscreenOnly)
     readonly property var hyprOptions: [
         {
             "label": I18n.tr("Tile"),
@@ -368,6 +373,7 @@ DDialog {
         saturationOn = false;
         saturationValue = 100;
         blockOutValue = "";
+        blockOutHide = false;
         columnDisplayValue = "";
         floatingRelativeValue = "top-left";
         columnWidthUnit = WindowRuleSize.PIXELS;
@@ -434,7 +440,7 @@ DDialog {
         const dynamic = [];
         if (actions.variableRefreshRate)
             dynamic.push("vrr");
-        if (niriConfigNext && actions.vrrFullscreenOnly)
+        if (niriVrrFullscreenOnly && actions.vrrFullscreenOnly)
             dynamic.push("vrrFullscreen");
         if (actions.clipToGeometry)
             dynamic.push("clip");
@@ -458,11 +464,12 @@ DDialog {
         saturationOn = actions.backgroundSaturation !== undefined && actions.backgroundSaturation !== null;
         saturationValue = saturationOn ? Math.round(actions.backgroundSaturation * 100) : 100;
         blockOutValue = actions.blockOutFrom || "";
+        blockOutHide = actions.blockOutKind === "hide";
         columnDisplayValue = actions.defaultColumnDisplay || "";
         blurCond.triState = triFromBool(actions.backgroundBlur);
         xrayCond.triState = triFromBool(actions.backgroundXray);
 
-        outputInput.text = actions.openOnOutput || "";
+        outputInput.text = [].concat(actions.openOnOutput || []).join(", ");
         workspaceInput.text = actions.openOnWorkspace || "";
         const columnWidth = WindowRuleSize.parse(actions.defaultColumnWidth);
         const windowHeight = WindowRuleSize.parse(actions.defaultWindowHeight);
@@ -555,11 +562,15 @@ DDialog {
 
     function ownedActionKeys() {
         const keys = ["opacity", "openFloating", "openMaximized", "openFullscreen", "cornerRadius"];
-        // Without the capability these stay hidden and are carried through untouched.
-        if (niriConfigNext)
-            keys.push("vrrFullscreenOnly", "onXdgActivate", "pinchSensitivity");
+        // Without its capability a key stays hidden and is carried through untouched.
+        if (niriVrrFullscreenOnly)
+            keys.push("vrrFullscreenOnly");
+        if (niriOnXdgActivate)
+            keys.push("onXdgActivate");
+        if (niriPinchSensitivity)
+            keys.push("pinchSensitivity");
         if (isNiri)
-            return keys.concat(["openMaximizedToEdges", "openFocused", "openOnOutput", "openOnWorkspace", "minWidth", "maxWidth", "minHeight", "maxHeight", "defaultColumnWidth", "defaultWindowHeight", "variableRefreshRate", "clipToGeometry", "tiledState", "drawBorderWithBackground", "blockOutFrom", "defaultColumnDisplay", "scrollFactor", "backgroundBlur", "backgroundXray", "backgroundNoise", "backgroundSaturation", "defaultFloatingX", "defaultFloatingY", "defaultFloatingRelativeTo"]);
+            return keys.concat(["openMaximizedToEdges", "openFocused", "openOnOutput", "openOnWorkspace", "minWidth", "maxWidth", "minHeight", "maxHeight", "defaultColumnWidth", "defaultWindowHeight", "variableRefreshRate", "clipToGeometry", "tiledState", "drawBorderWithBackground", "blockOutFrom", "blockOutKind", "defaultColumnDisplay", "scrollFactor", "backgroundBlur", "backgroundXray", "backgroundNoise", "backgroundSaturation", "defaultFloatingX", "defaultFloatingY", "defaultFloatingRelativeTo"]);
         if (isHyprland)
             return keys.concat(hyprOptions.map(option => option.value), hyprEffectOptions.map(option => option.value), ["sizeWidth", "sizeHeight", "moveX", "moveY", "monitor", "workspace", "focusOnActivate", "scrollingWidth", "tonemap", "borderColor", "suppressEvent"]);
         if (isMango)
@@ -584,8 +595,9 @@ DDialog {
             actions.openFullscreen = true;
         if (has("focus") && isNiri)
             actions.openFocused = true;
-        if (isNiri && outputInput.text.trim())
-            actions.openOnOutput = outputInput.text.trim();
+        const outputs = niriOutputList ? outputInput.text.split(",").map(output => output.trim()).filter(output => output) : [outputInput.text.trim()].filter(output => output);
+        if (isNiri && outputs.length > 0)
+            actions.openOnOutput = outputs;
         if (isNiri && workspaceInput.text.trim())
             actions.openOnWorkspace = workspaceInput.text.trim();
         if (cornerRadiusOn)
@@ -615,11 +627,11 @@ DDialog {
                 actions.defaultWindowHeight = windowHeight;
             if (dynamicFlags.includes("vrr"))
                 actions.variableRefreshRate = true;
-            if (niriConfigNext && dynamicFlags.includes("vrrFullscreen"))
+            if (niriVrrFullscreenOnly && dynamicFlags.includes("vrrFullscreen"))
                 actions.vrrFullscreenOnly = true;
-            if (niriConfigNext && pinchOn)
+            if (niriPinchSensitivity && pinchOn)
                 actions.pinchSensitivity = pinchValue / 100;
-            if (niriConfigNext && xdgActivateValue)
+            if (niriOnXdgActivate && xdgActivateValue)
                 actions.onXdgActivate = xdgActivateValue;
             if (dynamicFlags.includes("clip"))
                 actions.clipToGeometry = true;
@@ -629,6 +641,8 @@ DDialog {
                 actions.drawBorderWithBackground = true;
             if (blockOutValue)
                 actions.blockOutFrom = blockOutValue;
+            if (blockOutValue && blockOutHide)
+                actions.blockOutKind = "hide";
             if (columnDisplayValue)
                 actions.defaultColumnDisplay = columnDisplayValue;
             if (scrollFactorOn)
@@ -1170,7 +1184,8 @@ DDialog {
                 id: outputInput
                 leftIconName: "monitor"
                 labelText: I18n.tr("Output", "noun, display output a window opens on, window rule field")
-                placeholderText: "HDMI-A-1"
+                placeholderText: root.niriOutputList ? "DP-1, DP-2" : "HDMI-A-1"
+                supportingText: root.niriOutputList ? I18n.tr("Comma separated, the first connected output wins", "window rule output field, how several outputs are tried") : ""
             }
 
             Field {
@@ -1182,7 +1197,7 @@ DDialog {
         }
 
         SettingsDropdownRow {
-            visible: root.niriConfigNext
+            visible: root.niriOnXdgActivate
             text: I18n.tr("On activation", "window rule option, what niri does when the window asks to be activated")
             options: root.xdgActivateOptions.map(root.xdgActivateLabel)
             currentValue: root.xdgActivateLabel(root.xdgActivateValue)
@@ -1219,6 +1234,7 @@ DDialog {
 
         SettingsToggleSliderRow {
             text: I18n.tr("Opacity")
+            sliderText: I18n.tr("Opacity")
             checked: root.opacityOn
             value: root.opacityValue
             minimum: 10
@@ -1230,6 +1246,7 @@ DDialog {
 
         SettingsToggleSliderRow {
             text: I18n.tr("Corner radius")
+            sliderText: I18n.tr("Radius")
             checked: root.cornerRadiusOn
             value: root.cornerRadiusValue
             maximum: 20
@@ -1242,6 +1259,7 @@ DDialog {
         SettingsToggleSliderRow {
             visible: root.isNiri
             text: I18n.tr("Scroll Factor")
+            sliderText: I18n.tr("Amount")
             checked: root.scrollFactorOn
             value: root.scrollFactorValue
             minimum: 10
@@ -1253,8 +1271,9 @@ DDialog {
         }
 
         SettingsToggleSliderRow {
-            visible: root.niriConfigNext
+            visible: root.niriPinchSensitivity
             text: I18n.tr("Pinch sensitivity", "touchpad slider, how strongly pinch gestures zoom in apps")
+            sliderText: I18n.tr("Amount")
             checked: root.pinchOn
             value: root.pinchValue
             minimum: 10
@@ -1286,6 +1305,16 @@ DDialog {
             currentValue: root.blockOutLabel(root.blockOutValue)
             enabled: root.fieldsEnabled
             onValueChanged: value => root.blockOutValue = root.blockOutOptions.find(option => root.blockOutLabel(option) === value) ?? ""
+        }
+
+        SettingsToggleRow {
+            // niri 26.04 shows it only so a set value can be cleared
+            visible: root.isNiri && root.blockOutValue !== "" && (root.niriBlockOutKind || root.blockOutHide)
+            text: I18n.tr("Hide instead of black out", "window rule option, leave the window out of captures instead of drawing a black rectangle")
+            description: I18n.tr("Captures show whatever is underneath the window, which may be sensitive", "window rule option, warning for hiding a window from captures")
+            checked: root.blockOutHide
+            enabled: root.fieldsEnabled
+            onToggled: checked => root.blockOutHide = checked
         }
 
         SettingsDropdownRow {
@@ -1327,6 +1356,7 @@ DDialog {
 
         SettingsToggleSliderRow {
             text: I18n.tr("Noise", "window rule background noise effect checkbox")
+            sliderText: I18n.tr("Amount")
             checked: root.noiseOn
             value: root.noiseValue
             unit: "%"
@@ -1337,6 +1367,7 @@ DDialog {
 
         SettingsToggleSliderRow {
             text: I18n.tr("Saturation", "window rule background color saturation checkbox")
+            sliderText: I18n.tr("Amount")
             checked: root.saturationOn
             value: root.saturationValue
             maximum: 200
@@ -1490,7 +1521,7 @@ DDialog {
         expanded: false
 
         SettingsRow {
-            title: I18n.tr("Focus", "noun, window rule editor group of keyboard focus options")
+            title: I18n.tr("Focus", "noun, window rule editor group of keyboard focus options", true)
 
             body: DFilterChips {
                 width: parent.width
@@ -1553,6 +1584,7 @@ DDialog {
 
         SettingsToggleSliderRow {
             text: I18n.tr("Column Width")
+            sliderText: I18n.tr("Width")
             description: I18n.tr("Scrolling", "Hyprland tiling layout name")
             checked: root.scrollingWidthOn
             value: root.scrollingWidthValue
