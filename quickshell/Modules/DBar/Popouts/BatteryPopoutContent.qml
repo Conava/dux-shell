@@ -94,8 +94,8 @@ Item {
     property bool devicesSeen: false
     readonly property bool showDevices: root.devicesSeen && SettingsData.batteryPopoutDevices
     readonly property bool statsEnabled: SettingsData.batteryPopoutStats
-    readonly property bool factsBeside: root.statsEnabled && root.style === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
-    readonly property var statsModel: root.factsBeside && root.showBattery ? [] : root.shownStats
+    readonly property bool factsBeside: root.showBattery && root.statsEnabled && root.style === "ring" && SettingsData.batteryPopoutDetailsLayout === "list" && !BatteryPopoutMetrics.compact
+    readonly property var statsModel: root.factsBeside ? [] : root.shownStats
     readonly property bool hasStats: root.statsModel.length > 0
     readonly property bool showGroup: root.showPower || root.hasStats
     readonly property var heroSource: {
